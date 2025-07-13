@@ -11,6 +11,30 @@ export default function HomePage() {
   const [updates, setUpdates] = useState<RouteUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const updateTypes = [
+    {
+      value: "newset",
+      label: "뉴셋",
+      color: "bg-green-100 text-green-800 hover:bg-green-200",
+    },
+    {
+      value: "removal",
+      label: "탈거",
+      color: "bg-red-100 text-red-800 hover:bg-red-200",
+    },
+    {
+      value: "partial_removal",
+      label: "부분탈거",
+      color: "bg-orange-100 text-orange-800 hover:bg-orange-200",
+    },
+    {
+      value: "announcement",
+      label: "공지",
+      color: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+    },
+  ];
 
   const fetchUpdates = async () => {
     try {
@@ -34,19 +58,19 @@ export default function HomePage() {
   };
 
   const getUpdateTypeLabel = (type: string) => {
-    switch (type) {
-      case "newset":
-        return { label: "뉴셋", color: "bg-green-100 text-green-800" };
-      case "removal":
-        return { label: "탈거", color: "bg-red-100 text-red-800" };
-      case "partial_removal":
-        return { label: "부분탈거", color: "bg-orange-100 text-orange-800" };
-      case "announcement":
-        return { label: "공지", color: "bg-blue-100 text-blue-800" };
-      default:
-        return { label: type, color: "bg-gray-100 text-gray-800" };
+    const typeInfo = updateTypes.find((t) => t.value === type);
+    if (typeInfo) {
+      return {
+        label: typeInfo.label,
+        color: typeInfo.color.split(" ").slice(0, 2).join(" "),
+      };
     }
+    return { label: type, color: "bg-gray-100 text-gray-800" };
   };
+
+  const filteredUpdates = selectedType
+    ? updates.filter((update) => update.type === selectedType)
+    : updates;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-6">
@@ -58,12 +82,30 @@ export default function HomePage() {
         </p>
       </header>
 
-      {/* Refresh Button */}
-      <div className="flex justify-end mb-6">
+      {/* Filter and Refresh Buttons */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {updateTypes.map((type) => (
+            <button
+              key={type.value}
+              onClick={() =>
+                setSelectedType(selectedType === type.value ? null : type.value)
+              }
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
+                ${
+                  selectedType === type.value
+                    ? type.color
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 shrink-0"
         >
           <RefreshCw
             className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -77,13 +119,17 @@ export default function HomePage() {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
-      ) : updates.length === 0 ? (
+      ) : filteredUpdates.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <p className="text-gray-500">아직 등록된 업데이트가 없습니다.</p>
+          <p className="text-gray-500">
+            {selectedType
+              ? "선택한 카테고리의 업데이트가 없습니다."
+              : "아직 등록된 업데이트가 없습니다."}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {updates.map((update) => {
+          {filteredUpdates.map((update) => {
             const typeInfo = getUpdateTypeLabel(update.type);
             return (
               <article
