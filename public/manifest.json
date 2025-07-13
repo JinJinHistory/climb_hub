@@ -1,0 +1,23 @@
+{
+  "name": "Climb Hub - 클라이밍 뉴셋 정보",
+  "short_name": "Climb Hub",
+  "description": "전국 클라이밍 암장의 뉴셋/탈거 정보를 한눈에",
+  "theme_color": "#10b981",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
