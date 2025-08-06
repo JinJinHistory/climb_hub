@@ -1,38 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Edit2, Instagram, MapPin, Phone } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { Gym, Brand } from "@/types";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_ALL_GYMS, GET_BRANDS } from "@/graphql/queries";
+import { CREATE_GYM, UPDATE_GYM } from "@/graphql/mutations";
 
 export default function AdminGymsPage() {
-  const [gyms, setGyms] = useState<Gym[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingGym, setEditingGym] = useState<Gym | null>(null);
+  const [editingGym, setEditingGym] = useState<any | null>(null);
   const [formData, setFormData] = useState({
-    brand_id: "",
+    brandId: "",
     name: "",
-    branch_name: "",
-    instagram_url: "",
-    instagram_handle: "",
+    branchName: "",
+    instagramUrl: "",
+    instagramHandle: "",
     address: "",
     phone: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // 암장 목록 가져오기
+  const { data: gymsData, loading: gymsLoading, refetch: refetchGyms } = useQuery(GET_ALL_GYMS, {
+    variables: { activeOnly: false }, // 모든 암장 가져오기
+  });
 
-  const fetchData = async () => {
-    const [gymsData, brandsData] = await Promise.all([
-      supabase.from("gyms").select("*, brand:brands(*)").order("name"),
-      supabase.from("brands").select("*").order("name"),
-    ]);
+  // 브랜드 목록 가져오기
+  const { data: brandsData, loading: brandsLoading } = useQuery(GET_BRANDS);
 
-    if (gymsData.data) setGyms(gymsData.data);
-    if (brandsData.data) setBrands(brandsData.data);
-  };
+  // 암장 생성 뮤테이션
+  const [createGym] = useMutation(CREATE_GYM);
+
+  // 암장 수정 뮤테이션
+  const [updateGym] = useMutation(UPDATE_GYM);
+
+  const gyms = gymsData?.gyms || [];
+  const brands = brandsData?.brands || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,48 +42,50 @@ export default function AdminGymsPage() {
     try {
       if (editingGym) {
         // 수정
-        const { error } = await supabase
-          .from("gyms")
-          .update(formData)
-          .eq("id", editingGym.id);
-
-        if (error) throw error;
+        await updateGym({
+          variables: {
+            id: editingGym.id,
+            input: formData,
+          },
+        });
         alert("암장 정보가 수정되었습니다!");
       } else {
         // 추가
-        const { error } = await supabase.from("gyms").insert(formData);
-
-        if (error) throw error;
+        await createGym({
+          variables: {
+            input: formData,
+          },
+        });
         alert("새 암장이 추가되었습니다!");
       }
 
       // 폼 초기화 및 목록 새로고침
       setFormData({
-        brand_id: "",
+        brandId: "",
         name: "",
-        branch_name: "",
-        instagram_url: "",
-        instagram_handle: "",
+        branchName: "",
+        instagramUrl: "",
+        instagramHandle: "",
         address: "",
         phone: "",
       });
       setEditingGym(null);
       setShowForm(false);
-      fetchData();
+      refetchGyms();
     } catch (error) {
       console.error("Error saving gym:", error);
       alert("오류가 발생했습니다.");
     }
   };
 
-  const handleEdit = (gym: Gym) => {
+  const handleEdit = (gym: any) => {
     setEditingGym(gym);
     setFormData({
-      brand_id: gym.brand_id,
+      brandId: gym.brand?.id || "",
       name: gym.name,
-      branch_name: gym.branch_name,
-      instagram_url: gym.instagram_url,
-      instagram_handle: gym.instagram_handle,
+      branchName: gym.branchName,
+      instagramUrl: gym.instagramUrl,
+      instagramHandle: gym.instagramHandle,
       address: gym.address || "",
       phone: gym.phone || "",
     });
@@ -93,6 +97,14 @@ export default function AdminGymsPage() {
     return match ? match[1] : "";
   };
 
+  if (gymsLoading || brandsLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -101,11 +113,11 @@ export default function AdminGymsPage() {
           onClick={() => {
             setEditingGym(null);
             setFormData({
-              brand_id: "",
+              brandId: "",
               name: "",
-              branch_name: "",
-              instagram_url: "",
-              instagram_handle: "",
+              branchName: "",
+              instagramUrl: "",
+              instagramHandle: "",
               address: "",
               phone: "",
             });
@@ -129,14 +141,14 @@ export default function AdminGymsPage() {
                 <label className="block text-sm font-medium mb-2">브랜드</label>
                 <select
                   required
-                  value={formData.brand_id}
+                  value={formData.brandId}
                   onChange={(e) =>
-                    setFormData({ ...formData, brand_id: e.target.value })
+                    setFormData({ ...formData, brandId: e.target.value })
                   }
                   className="w-full p-2 border rounded-lg"
                 >
                   <option value="">브랜드 선택</option>
-                  {brands.map((brand) => (
+                  {brands.map((brand: any) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.name}
                     </option>
@@ -149,9 +161,9 @@ export default function AdminGymsPage() {
                 <input
                   required
                   type="text"
-                  value={formData.branch_name}
+                  value={formData.branchName}
                   onChange={(e) =>
-                    setFormData({ ...formData, branch_name: e.target.value })
+                    setFormData({ ...formData, branchName: e.target.value })
                   }
                   placeholder="예: 일산점"
                   className="w-full p-2 border rounded-lg"
@@ -181,13 +193,13 @@ export default function AdminGymsPage() {
                 <input
                   required
                   type="url"
-                  value={formData.instagram_url}
+                  value={formData.instagramUrl}
                   onChange={(e) => {
                     const url = e.target.value;
                     setFormData({
                       ...formData,
-                      instagram_url: url,
-                      instagram_handle: extractInstagramHandle(url),
+                      instagramUrl: url,
+                      instagramHandle: extractInstagramHandle(url),
                     });
                   }}
                   placeholder="https://www.instagram.com/username"
@@ -269,12 +281,12 @@ export default function AdminGymsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {gyms.map((gym) => (
+            {gyms.map((gym: any) => (
               <tr key={gym.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div>
                     <p className="font-medium">{gym.name}</p>
-                    <p className="text-sm text-gray-500">{gym.branch_name}</p>
+                    <p className="text-sm text-gray-500">{gym.branchName}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -284,12 +296,12 @@ export default function AdminGymsPage() {
                 </td>
                 <td className="px-6 py-4">
                   <a
-                    href={gym.instagram_url}
+                    href={gym.instagramUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-pink-600 hover:text-pink-700"
                   >
-                    <Instagram className="w-4 h-4" />@{gym.instagram_handle}
+                    <Instagram className="w-4 h-4" />@{gym.instagramHandle}
                   </a>
                 </td>
                 <td className="px-6 py-4">

@@ -3,52 +3,39 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Edit2, Trash2, Calendar, Search } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { RouteUpdate } from "@/types";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_ROUTE_UPDATES, GET_ALL_GYMS } from "@/graphql/queries";
+import { DELETE_ROUTE_UPDATE } from "@/graphql/mutations";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 export default function AdminUpdatesListPage() {
-  const [updates, setUpdates] = useState<RouteUpdate[]>([]);
-  const [filteredUpdates, setFilteredUpdates] = useState<RouteUpdate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredUpdates, setFilteredUpdates] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterGym, setFilterGym] = useState<string>("all");
-  const [gyms, setGyms] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // 업데이트 목록 가져오기
+  const { data: updatesData, loading: updatesLoading, refetch: refetchUpdates } = useQuery(GET_ROUTE_UPDATES, {
+    variables: {
+      limit: 1000, // 충분한 데이터를 가져오기 위해 큰 값 설정
+    },
+  });
+
+  // 암장 목록 가져오기
+  const { data: gymsData, loading: gymsLoading } = useQuery(GET_ALL_GYMS, {
+    variables: { activeOnly: true },
+  });
+
+  // 업데이트 삭제 뮤테이션
+  const [deleteRouteUpdate] = useMutation(DELETE_ROUTE_UPDATE);
+
+  const updates = updatesData?.routeUpdates || [];
+  const gyms = gymsData?.gyms || [];
 
   useEffect(() => {
     filterUpdates();
   }, [updates, searchTerm, filterType, filterGym]);
-
-  const fetchData = async () => {
-    try {
-      const [updatesData, gymsData] = await Promise.all([
-        supabase
-          .from("route_updates")
-          .select(
-            `
-            *,
-            gym:gyms(*, brand:brands(*))
-          `
-          )
-          .order("update_date", { ascending: false })
-          .order("created_at", { ascending: false }),
-        supabase.from("gyms").select("*").order("name"),
-      ]);
-
-      if (updatesData.data) setUpdates(updatesData.data);
-      if (gymsData.data) setGyms(gymsData.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filterUpdates = () => {
     let filtered = [...updates];
@@ -72,7 +59,7 @@ export default function AdminUpdatesListPage() {
 
     // 암장 필터
     if (filterGym !== "all") {
-      filtered = filtered.filter((update) => update.gym_id === filterGym);
+      filtered = filtered.filter((update) => update.gymId === filterGym);
     }
 
     setFilteredUpdates(filtered);
@@ -82,15 +69,12 @@ export default function AdminUpdatesListPage() {
     if (!confirm("정말로 이 업데이트를 삭제하시겠습니까?")) return;
 
     try {
-      const { error } = await supabase
-        .from("route_updates")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      await deleteRouteUpdate({
+        variables: { id },
+      });
 
       alert("삭제되었습니다.");
-      fetchData();
+      refetchUpdates();
     } catch (error) {
       console.error("Error deleting update:", error);
       alert("삭제 중 오류가 발생했습니다.");
@@ -110,7 +94,7 @@ export default function AdminUpdatesListPage() {
     return types[type] || { label: type, color: "bg-gray-100 text-gray-800" };
   };
 
-  if (loading) {
+  if (updatesLoading || gymsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -162,7 +146,7 @@ export default function AdminUpdatesListPage() {
             className="p-2 border rounded-lg"
           >
             <option value="all">모든 암장</option>
-            {gyms.map((gym) => (
+            {gyms.map((gym: any) => (
               <option key={gym.id} value={gym.id}>
                 {gym.name}
               </option>
@@ -219,10 +203,10 @@ export default function AdminUpdatesListPage() {
                         <Calendar className="w-4 h-4 text-gray-400 mr-2" />
                         <div>
                           <p className="text-sm font-medium">
-                            {format(new Date(update.update_date), "yyyy-MM-dd")}
+                            {format(new Date(update.updateDate), "yyyy-MM-dd")}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {format(new Date(update.created_at), "HH:mm")}
+                            {format(new Date(update.createdAt), "HH:mm")}
                           </p>
                         </div>
                       </div>
@@ -256,9 +240,9 @@ export default function AdminUpdatesListPage() {
                             {update.description}
                           </p>
                         )}
-                        {update.instagram_post_url && (
+                        {update.instagramPostUrl && (
                           <a
-                            href={update.instagram_post_url}
+                            href={update.instagramPostUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:text-blue-700"

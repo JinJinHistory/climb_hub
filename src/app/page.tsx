@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Calendar, MapPin, RefreshCw } from "lucide-react";
-import { supabase, gymService } from "@/lib/supabase";
-import { RouteUpdate } from "@/types";
+import { useQuery } from "@apollo/client";
+import { GET_ROUTE_UPDATES } from "@/graphql/queries";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 export default function HomePage() {
-  const [updates, setUpdates] = useState<RouteUpdate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const { data, loading, error, refetch } = useQuery(GET_ROUTE_UPDATES, {
+    variables: {
+      limit: 20,
+      type: selectedType,
+    },
+  });
+
+  const updates = data?.routeUpdates || [];
 
   const updateTypes = [
     {
@@ -36,25 +42,8 @@ export default function HomePage() {
     },
   ];
 
-  const fetchUpdates = async () => {
-    try {
-      const data = await gymService.getLatestUpdates(undefined, 20);
-      setUpdates(data || []);
-    } catch (error) {
-      console.error("Error fetching updates:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUpdates();
-  }, []);
-
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchUpdates();
+    await refetch();
   };
 
   const getUpdateTypeLabel = (type: string) => {
@@ -68,9 +57,7 @@ export default function HomePage() {
     return { label: type, color: "bg-gray-100 text-gray-800" };
   };
 
-  const filteredUpdates = selectedType
-    ? updates.filter((update) => update.type === selectedType)
-    : updates;
+  const filteredUpdates = updates;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-6">
@@ -104,11 +91,11 @@ export default function HomePage() {
         </div>
         <button
           onClick={handleRefresh}
-          disabled={refreshing}
+          disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 shrink-0"
         >
           <RefreshCw
-            className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+            className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
           />
           새로고침
         </button>

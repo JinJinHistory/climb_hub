@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Calendar, MapPin, Save, ArrowLeft } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { Gym, RouteUpdate } from "@/types";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_ROUTE_UPDATE, GET_ALL_GYMS } from "@/graphql/queries";
+import { UPDATE_ROUTE_UPDATE } from "@/graphql/mutations";
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -13,68 +14,58 @@ export default function AdminUpdateEditPage() {
   const router = useRouter();
   const updateId = params.id as string;
 
-  const [gyms, setGyms] = useState<Gym[]>([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    gym_id: "",
+    gymId: "",
     type: "newset" as const,
-    update_date: "",
+    updateDate: "",
     title: "",
     description: "",
-    instagram_post_url: "",
+    instagramPostUrl: "",
   });
 
+  // 업데이트 데이터 가져오기
+  const { data: updateData, loading: updateLoading } = useQuery(GET_ROUTE_UPDATE, {
+    variables: { id: updateId },
+    skip: !updateId,
+  });
+
+  // 암장 목록 가져오기
+  const { data: gymsData, loading: gymsLoading } = useQuery(GET_ALL_GYMS, {
+    variables: { activeOnly: true },
+  });
+
+  // 업데이트 수정 뮤테이션
+  const [updateRouteUpdate] = useMutation(UPDATE_ROUTE_UPDATE);
+
   useEffect(() => {
-    fetchData();
-  }, [updateId]);
-
-  const fetchData = async () => {
-    try {
-      const [updateData, gymsData] = await Promise.all([
-        supabase.from("route_updates").select("*").eq("id", updateId).single(),
-        supabase
-          .from("gyms")
-          .select("*, brand:brands(*)")
-          .eq("is_active", true)
-          .order("name"),
-      ]);
-
-      if (updateData.data) {
-        setFormData({
-          gym_id: updateData.data.gym_id,
-          type: updateData.data.type,
-          update_date: updateData.data.update_date,
-          title: updateData.data.title || "",
-          description: updateData.data.description || "",
-          instagram_post_url: updateData.data.instagram_post_url || "",
-        });
-      }
-
-      if (gymsData.data) setGyms(gymsData.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("데이터를 불러오는 중 오류가 발생했습니다.");
-      router.push("/admin/updates/list");
-    } finally {
-      setLoading(false);
+    if (updateData?.routeUpdate) {
+      const update = updateData.routeUpdate;
+      setFormData({
+        gymId: update.gymId,
+        type: update.type,
+        updateDate: update.updateDate,
+        title: update.title || "",
+        description: update.description || "",
+        instagramPostUrl: update.instagramPostUrl || "",
+      });
     }
-  };
+  }, [updateData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from("route_updates")
-        .update({
-          ...formData,
-          is_verified: true,
-        })
-        .eq("id", updateId);
-
-      if (error) throw error;
+      await updateRouteUpdate({
+        variables: {
+          id: updateId,
+          input: {
+            ...formData,
+            isVerified: true,
+          },
+        },
+      });
 
       alert("업데이트가 수정되었습니다!");
       router.push("/admin/updates/list");
@@ -93,10 +84,28 @@ export default function AdminUpdateEditPage() {
     { value: "announcement", label: "공지", color: "text-blue-600" },
   ];
 
-  if (loading) {
+  const gyms = gymsData?.gyms || [];
+
+  if (updateLoading || gymsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (!updateData?.routeUpdate) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center">
+          <p className="text-gray-500">업데이트를 찾을 수 없습니다.</p>
+          <Link
+            href="/admin/updates/list"
+            className="text-blue-600 hover:text-blue-700"
+          >
+            목록으로 돌아가기
+          </Link>
+        </div>
       </div>
     );
   }
@@ -124,14 +133,14 @@ export default function AdminUpdateEditPage() {
             </label>
             <select
               required
-              value={formData.gym_id}
+              value={formData.gymId}
               onChange={(e) =>
-                setFormData({ ...formData, gym_id: e.target.value })
+                setFormData({ ...formData, gymId: e.target.value })
               }
               className="w-full p-2 border rounded-lg"
             >
               <option value="">암장을 선택하세요</option>
-              {gyms.map((gym) => (
+              {gyms.map((gym: any) => (
                 <option key={gym.id} value={gym.id}>
                   {gym.name}
                 </option>
@@ -174,9 +183,9 @@ export default function AdminUpdateEditPage() {
             <input
               type="date"
               required
-              value={formData.update_date}
+              value={formData.updateDate}
               onChange={(e) =>
-                setFormData({ ...formData, update_date: e.target.value })
+                setFormData({ ...formData, updateDate: e.target.value })
               }
               className="w-full p-2 border rounded-lg"
             />
@@ -220,9 +229,9 @@ export default function AdminUpdateEditPage() {
             </label>
             <input
               type="url"
-              value={formData.instagram_post_url}
+              value={formData.instagramPostUrl}
               onChange={(e) =>
-                setFormData({ ...formData, instagram_post_url: e.target.value })
+                setFormData({ ...formData, instagramPostUrl: e.target.value })
               }
               placeholder="https://www.instagram.com/p/..."
               className="w-full p-2 border rounded-lg"

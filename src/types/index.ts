@@ -1,51 +1,62 @@
-import { Database } from "@/types/database";
+export interface Brand {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-// export interface Brand {
-//   id: string;
-//   name: string;
-//   logo_url?: string;
-//   website_url?: string;
-// }
-
-// export interface Gym {
-//   id: string;
-//   brand_id: string;
-//   name: string;
-//   branch_name: string;
-//   instagram_url: string;
-//   instagram_handle: string;
-//   is_active: boolean;
-//   brand?: Brand;
-// }
-
-// export interface RouteUpdate {
-//   id: string;
-//   gym_id: string;
-//   type: "newset" | "removal" | "partial_removal" | "announcement";
-//   update_date: string;
-//   title?: string;
-//   description?: string;
-//   instagram_post_url?: string;
-//   raw_caption?: string;
-//   created_at: string;
-//   gym?: Gym;
-// }
-
-export type Brand = Database["public"]["Tables"]["brands"]["Row"];
-export type Gym = Database["public"]["Tables"]["gyms"]["Row"] & {
+export interface Gym {
+  id: string;
+  brandId: string;
+  name: string;
+  branchName: string;
+  instagramUrl: string;
+  instagramHandle: string;
+  address?: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   brand?: Brand;
-};
-export type RouteUpdate =
-  Database["public"]["Tables"]["route_updates"]["Row"] & {
-    gym?: Gym;
-  };
-export type CrawlLog = Database["public"]["Tables"]["crawl_logs"]["Row"];
+}
 
-export type UpdateType =
-  | "newset"
-  | "removal"
-  | "partial_removal"
-  | "announcement";
+export interface RouteUpdate {
+  id: string;
+  gymId: string;
+  type: 'newset' | 'removal' | 'partial_removal' | 'announcement';
+  updateDate: string;
+  title?: string;
+  description?: string;
+  instagramPostUrl?: string;
+  instagramPostId?: string;
+  imageUrls: string[];
+  rawCaption?: string;
+  parsedData?: any;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  gym?: Gym;
+}
+
+export interface CrawlLog {
+  id: string;
+  gymId: string;
+  status: 'success' | 'failed' | 'partial';
+  postsFound: number;
+  postsNew: number;
+  errorMessage?: string;
+  startedAt: string;
+  completedAt?: string;
+  createdAt: string;
+  gym?: Gym;
+}
+
+export type UpdateType = 'newset' | 'removal' | 'partial_removal' | 'announcement';
+export type CrawlStatus = 'success' | 'failed' | 'partial';
 
 export interface ParsedRouteData {
   routes?: {

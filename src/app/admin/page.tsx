@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Calendar, TrendingUp, MapPin, Clock } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useQuery } from "@apollo/client";
+import { GET_ROUTE_UPDATES } from "@/graphql/queries";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -23,79 +24,32 @@ interface RecentUpdate {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats>({
-    totalGyms: 0,
-    totalUpdates: 0,
-    todayUpdates: 0,
-    thisWeekUpdates: 0,
+  const { data, loading, error } = useQuery(GET_ROUTE_UPDATES, {
+    variables: {
+      limit: 100, // 충분한 데이터를 가져오기 위해 큰 값 설정
+    },
   });
-  const [recentUpdates, setRecentUpdates] = useState<RecentUpdate[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  // 통계 계산
+  const today = new Date();
+  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  const updates = data?.routeUpdates || [];
+  const recentUpdates = updates.slice(0, 5);
+  
+  const todayUpdates = updates.filter(update => 
+    new Date(update.createdAt) >= today
+  ).length;
+  
+  const thisWeekUpdates = updates.filter(update => 
+    new Date(update.createdAt) >= weekAgo
+  ).length;
 
-  const fetchDashboardData = async () => {
-    try {
-      // 통계 데이터 가져오기
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      const [gymsCount, updatesCount, todayCount, weekCount, recent] =
-        await Promise.all([
-          // 전체 암장 수
-          supabase
-            .from("gyms")
-            .select("id", { count: "exact" })
-            .eq("is_active", true),
-
-          // 전체 업데이트 수
-          supabase.from("route_updates").select("id", { count: "exact" }),
-
-          // 오늘 업데이트 수
-          supabase
-            .from("route_updates")
-            .select("id", { count: "exact" })
-            .gte("created_at", format(today, "yyyy-MM-dd")),
-
-          // 이번 주 업데이트 수
-          supabase
-            .from("route_updates")
-            .select("id", { count: "exact" })
-            .gte("created_at", format(weekAgo, "yyyy-MM-dd")),
-
-          // 최근 업데이트
-          supabase
-            .from("route_updates")
-            .select(
-              `
-            id,
-            type,
-            update_date,
-            created_at,
-            gym:gyms(name, branch_name)
-          `
-            )
-            .order("created_at", { ascending: false })
-            .limit(5),
-        ]);
-
-      setStats({
-        totalGyms: gymsCount.count || 0,
-        totalUpdates: updatesCount.count || 0,
-        todayUpdates: todayCount.count || 0,
-        thisWeekUpdates: weekCount.count || 0,
-      });
-
-      if (recent.data) {
-        setRecentUpdates(recent.data as any);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
+  const stats = {
+    totalGyms: 0, // TODO: 별도 쿼리로 가져오기
+    totalUpdates: updates.length,
+    todayUpdates,
+    thisWeekUpdates,
   };
 
   const getUpdateTypeLabel = (type: string) => {

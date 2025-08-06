@@ -1,61 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Calendar, MapPin } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { Gym } from "@/types";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_ALL_GYMS } from "@/graphql/queries";
+import { CREATE_ROUTE_UPDATE } from "@/graphql/mutations";
 import { format } from "date-fns";
 
 export default function AdminUpdatesPage() {
-  const [gyms, setGyms] = useState<Gym[]>([]);
   const [formData, setFormData] = useState({
-    gym_id: "",
+    gymId: "",
     type: "newset" as const,
-    update_date: format(new Date(), "yyyy-MM-dd"),
+    updateDate: format(new Date(), "yyyy-MM-dd"),
     title: "",
     description: "",
-    instagram_post_url: "",
+    instagramPostUrl: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchGyms();
-  }, []);
+  // 암장 목록 가져오기
+  const { data: gymsData, loading: gymsLoading } = useQuery(GET_ALL_GYMS, {
+    variables: { activeOnly: true },
+  });
 
-  const fetchGyms = async () => {
-    const { data } = await supabase
-      .from("gyms")
-      .select("*, brand:brands(*)")
-      .eq("is_active", true)
-      .order("name");
-
-    if (data) setGyms(data);
-  };
+  // 업데이트 생성 뮤테이션
+  const [createRouteUpdate] = useMutation(CREATE_ROUTE_UPDATE);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from("route_updates").insert({
-        ...formData,
-        is_verified: true, // 관리자가 입력한 것은 검증됨으로 표시
+      await createRouteUpdate({
+        variables: {
+          input: {
+            ...formData,
+            isVerified: true, // 관리자가 입력한 것은 검증됨으로 표시
+          },
+        },
       });
-
-      console.log("[error]::: ", error);
-
-      if (error) throw error;
 
       alert("업데이트가 추가되었습니다!");
 
       // 폼 초기화
       setFormData({
-        gym_id: "",
+        gymId: "",
         type: "newset",
-        update_date: format(new Date(), "yyyy-MM-dd"),
+        updateDate: format(new Date(), "yyyy-MM-dd"),
         title: "",
         description: "",
-        instagram_post_url: "",
+        instagramPostUrl: "",
       });
     } catch (error) {
       console.error("Error adding update:", error);
@@ -72,6 +66,18 @@ export default function AdminUpdatesPage() {
     { value: "announcement", label: "공지", color: "text-blue-600" },
   ];
 
+  const gyms = gymsData?.gyms || [];
+
+  if (gymsLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">수동 업데이트 추가</h1>
@@ -86,14 +92,14 @@ export default function AdminUpdatesPage() {
             </label>
             <select
               required
-              value={formData.gym_id}
+              value={formData.gymId}
               onChange={(e) =>
-                setFormData({ ...formData, gym_id: e.target.value })
+                setFormData({ ...formData, gymId: e.target.value })
               }
               className="w-full p-2 border rounded-lg"
             >
               <option value="">암장을 선택하세요</option>
-              {gyms.map((gym) => (
+              {gyms.map((gym: any) => (
                 <option key={gym.id} value={gym.id}>
                   {gym.name}
                 </option>
@@ -136,9 +142,9 @@ export default function AdminUpdatesPage() {
             <input
               type="date"
               required
-              value={formData.update_date}
+              value={formData.updateDate}
               onChange={(e) =>
-                setFormData({ ...formData, update_date: e.target.value })
+                setFormData({ ...formData, updateDate: e.target.value })
               }
               className="w-full p-2 border rounded-lg"
             />
@@ -182,9 +188,9 @@ export default function AdminUpdatesPage() {
             </label>
             <input
               type="url"
-              value={formData.instagram_post_url}
+              value={formData.instagramPostUrl}
               onChange={(e) =>
-                setFormData({ ...formData, instagram_post_url: e.target.value })
+                setFormData({ ...formData, instagramPostUrl: e.target.value })
               }
               placeholder="https://www.instagram.com/p/..."
               className="w-full p-2 border rounded-lg"
