@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "codegen": "graphql-codegen",
-    "codegen:watch": "graphql-codegen --watch"
+    "codegen:watch": "graphql-codegen --watch",
+    "db:migrate": "node scripts/migrate.js",
+    "db:reset": "node scripts/reset-db.js",
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@apollo/client": "^3.13.9",
