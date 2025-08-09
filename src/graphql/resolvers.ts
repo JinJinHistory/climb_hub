@@ -750,7 +750,18 @@ export const resolvers = {
       );
 
       return result.rows.map((row) => ({
-        ...row,
+        id: row.id,
+        name: row.name,
+        branchName: row.branch_name,
+        instagramUrl: row.instagram_url,
+        instagramHandle: row.instagram_handle,
+        address: row.address,
+        phone: row.phone,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        isActive: row.is_active,
+        createdAt: formatDate(row.created_at),
+        updatedAt: formatDate(row.updated_at),
         brand: {
           id: row.brand_id,
           name: row.brand_name,

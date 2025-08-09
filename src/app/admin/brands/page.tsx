@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Edit2, Globe, ExternalLink, Trash2 } from "lucide-react";
-import { useQuery, useMutation } from "@apollo/client";
-import { GET_BRANDS } from "@/graphql/queries";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
+import { GET_BRANDS, GET_BRAND } from "@/graphql/queries";
 import { CREATE_BRAND, UPDATE_BRAND, DELETE_BRAND } from "@/graphql/mutations";
 
 export default function AdminBrandsPage() {
@@ -14,6 +14,9 @@ export default function AdminBrandsPage() {
     logoUrl: "",
     websiteUrl: "",
   });
+
+  // Apollo Client
+  const client = useApolloClient();
 
   // 브랜드 목록 가져오기
   const {
@@ -82,23 +85,63 @@ export default function AdminBrandsPage() {
   };
 
   const handleDelete = async (brand: any) => {
-    if (!confirm(`정말로 "${brand.name}" 브랜드를 삭제하시겠습니까?`)) {
-      return;
-    }
-
     try {
+      // 먼저 브랜드와 연결된 암장 정보를 조회
+      const brandResult = await client.query({
+        query: GET_BRAND,
+        variables: { id: brand.id },
+        fetchPolicy: "network-only",
+      });
+
+      const connectedGyms = brandResult.data?.brand?.gyms || [];
+      const activeGyms = connectedGyms.filter((gym: any) => gym.isActive);
+
+      let confirmMessage = `정말로 "${brand.name}" 브랜드를 삭제하시겠습니까?`;
+
+      if (connectedGyms.length > 0) {
+        confirmMessage = `⚠️ 경고: "${brand.name}" 브랜드를 삭제하면 연결된 ${
+          connectedGyms.length
+        }개의 암장도 모두 삭제됩니다!\n\n삭제될 암장들:\n${connectedGyms
+          .map((gym: any) => `• ${gym.branchName}`)
+          .join(
+            "\n"
+          )}\n\n⚠️ 각 암장의 모든 업데이트 기록과 데이터도 함께 삭제됩니다.\n\n정말로 삭제하시겠습니까?`;
+      }
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      // 연결된 암장이 있는 경우 추가 확인
+      if (connectedGyms.length > 0) {
+        const confirmPhrase = "하위 지점들을 모두 함께 삭제합니다";
+        const finalConfirm = prompt(
+          `⚠️ 정말로 삭제하시려면 다음 문구를 정확히 입력해주세요:\n\n"${confirmPhrase}"`
+        );
+
+        if (finalConfirm !== confirmPhrase) {
+          alert("입력한 문구가 일치하지 않습니다. 삭제가 취소되었습니다.");
+          return;
+        }
+      }
+
       await deleteBrand({
         variables: {
           id: brand.id,
         },
       });
-      alert("브랜드가 삭제되었습니다!");
+
+      alert(
+        `브랜드 "${brand.name}"${
+          connectedGyms.length > 0
+            ? `와 연결된 ${connectedGyms.length}개 암장`
+            : ""
+        }이 삭제되었습니다.`
+      );
       refetchBrands();
     } catch (error) {
       console.error("Error deleting brand:", error);
-      alert(
-        "삭제 중 오류가 발생했습니다. 해당 브랜드에 연결된 암장이 있는지 확인해주세요."
-      );
+      alert("삭제 중 오류가 발생했습니다.");
     }
   };
 

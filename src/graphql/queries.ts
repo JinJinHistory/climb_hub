@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 
 export const GET_ALL_GYMS = gql`
   query GetAllGyms($activeOnly: Boolean = true) {
@@ -174,4 +174,4 @@ export const GET_CRAWL_LOGS = gql`
       }
     }
   }
-`; 
+`;
