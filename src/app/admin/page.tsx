@@ -33,16 +33,16 @@ export default function AdminDashboard() {
   // 통계 계산
   const today = new Date();
   const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  
+
   const updates = data?.routeUpdates || [];
   const recentUpdates = updates.slice(0, 5);
-  
-  const todayUpdates = updates.filter(update => 
-    new Date(update.createdAt) >= today
+
+  const todayUpdates = updates.filter(
+    (update) => new Date(update.createdAt) >= today
   ).length;
-  
-  const thisWeekUpdates = updates.filter(update => 
-    new Date(update.createdAt) >= weekAgo
+
+  const thisWeekUpdates = updates.filter(
+    (update) => new Date(update.createdAt) >= weekAgo
   ).length;
 
   const stats = {
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
         <div className="divide-y">
           {recentUpdates.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
-              아직 업데이트가 없습니다
+              등록된 업데이트가 없습니다. 새 업데이트를 추가해보세요!
             </div>
           ) : (
             recentUpdates.map((update) => {

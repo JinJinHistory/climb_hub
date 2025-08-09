@@ -98,7 +98,11 @@ export default function AdminUpdatesPage() {
               }
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">암장을 선택하세요</option>
+              <option value="">
+                {gyms.length === 0
+                  ? "등록된 암장이 없습니다"
+                  : "암장을 선택하세요"}
+              </option>
               {gyms.map((gym: any) => (
                 <option key={gym.id} value={gym.id}>
                   {gym.name}

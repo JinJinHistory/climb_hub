@@ -25,10 +25,13 @@ export default function AdminUpdateEditPage() {
   });
 
   // 업데이트 데이터 가져오기
-  const { data: updateData, loading: updateLoading } = useQuery(GET_ROUTE_UPDATE, {
-    variables: { id: updateId },
-    skip: !updateId,
-  });
+  const { data: updateData, loading: updateLoading } = useQuery(
+    GET_ROUTE_UPDATE,
+    {
+      variables: { id: updateId },
+      skip: !updateId,
+    }
+  );
 
   // 암장 목록 가져오기
   const { data: gymsData, loading: gymsLoading } = useQuery(GET_ALL_GYMS, {
@@ -139,7 +142,11 @@ export default function AdminUpdateEditPage() {
               }
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">암장을 선택하세요</option>
+              <option value="">
+                {gyms.length === 0
+                  ? "등록된 암장이 없습니다"
+                  : "암장을 선택하세요"}
+              </option>
               {gyms.map((gym: any) => (
                 <option key={gym.id} value={gym.id}>
                   {gym.name}

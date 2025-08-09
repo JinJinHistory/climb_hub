@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit2, Instagram, MapPin, Phone } from "lucide-react";
+import { Plus, Edit2, Instagram, MapPin, Phone, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_ALL_GYMS, GET_BRANDS } from "@/graphql/queries";
-import { CREATE_GYM, UPDATE_GYM } from "@/graphql/mutations";
+import { CREATE_GYM, UPDATE_GYM, DELETE_GYM } from "@/graphql/mutations";
 
 export default function AdminGymsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingGym, setEditingGym] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     brandId: "",
-    name: "",
     branchName: "",
     instagramUrl: "",
     instagramHandle: "",
@@ -20,7 +19,11 @@ export default function AdminGymsPage() {
   });
 
   // 암장 목록 가져오기
-  const { data: gymsData, loading: gymsLoading, refetch: refetchGyms } = useQuery(GET_ALL_GYMS, {
+  const {
+    data: gymsData,
+    loading: gymsLoading,
+    refetch: refetchGyms,
+  } = useQuery(GET_ALL_GYMS, {
     variables: { activeOnly: false }, // 모든 암장 가져오기
   });
 
@@ -33,6 +36,9 @@ export default function AdminGymsPage() {
   // 암장 수정 뮤테이션
   const [updateGym] = useMutation(UPDATE_GYM);
 
+  // 암장 삭제 뮤테이션
+  const [deleteGym] = useMutation(DELETE_GYM);
+
   const gyms = gymsData?.gyms || [];
   const brands = brandsData?.brands || [];
 
@@ -40,12 +46,25 @@ export default function AdminGymsPage() {
     e.preventDefault();
 
     try {
+      // 브랜드명 찾기
+      const selectedBrand = brands.find(
+        (brand: any) => brand.id === formData.brandId
+      );
+      const gymName = selectedBrand
+        ? `${selectedBrand.name} ${formData.branchName}`
+        : formData.branchName;
+
+      const submitData = {
+        ...formData,
+        name: gymName,
+      };
+
       if (editingGym) {
         // 수정
         await updateGym({
           variables: {
             id: editingGym.id,
-            input: formData,
+            input: submitData,
           },
         });
         alert("암장 정보가 수정되었습니다!");
@@ -53,7 +72,7 @@ export default function AdminGymsPage() {
         // 추가
         await createGym({
           variables: {
-            input: formData,
+            input: submitData,
           },
         });
         alert("새 암장이 추가되었습니다!");
@@ -62,7 +81,6 @@ export default function AdminGymsPage() {
       // 폼 초기화 및 목록 새로고침
       setFormData({
         brandId: "",
-        name: "",
         branchName: "",
         instagramUrl: "",
         instagramHandle: "",
@@ -82,7 +100,6 @@ export default function AdminGymsPage() {
     setEditingGym(gym);
     setFormData({
       brandId: gym.brand?.id || "",
-      name: gym.name,
       branchName: gym.branchName,
       instagramUrl: gym.instagramUrl,
       instagramHandle: gym.instagramHandle,
@@ -90,6 +107,27 @@ export default function AdminGymsPage() {
       phone: gym.phone || "",
     });
     setShowForm(true);
+  };
+
+  const handleDelete = async (gym: any) => {
+    if (!confirm(`정말로 "${gym.name}" 암장을 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      await deleteGym({
+        variables: {
+          id: gym.id,
+        },
+      });
+      alert("암장이 삭제되었습니다!");
+      refetchGyms();
+    } catch (error) {
+      console.error("Error deleting gym:", error);
+      alert(
+        "삭제 중 오류가 발생했습니다. 해당 암장에 연결된 데이터가 있는지 확인해주세요."
+      );
+    }
   };
 
   const extractInstagramHandle = (url: string) => {
@@ -114,7 +152,6 @@ export default function AdminGymsPage() {
             setEditingGym(null);
             setFormData({
               brandId: "",
-              name: "",
               branchName: "",
               instagramUrl: "",
               instagramHandle: "",
@@ -138,7 +175,9 @@ export default function AdminGymsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">브랜드</label>
+                <label className="block text-sm font-medium mb-2">
+                  <span className="text-red-500">브랜드 *</span>
+                </label>
                 <select
                   required
                   value={formData.brandId}
@@ -147,7 +186,11 @@ export default function AdminGymsPage() {
                   }
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">브랜드 선택</option>
+                  <option value="">
+                    {brands.length === 0
+                      ? "등록된 브랜드가 없습니다"
+                      : "브랜드 선택"}
+                  </option>
                   {brands.map((brand: any) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.name}
@@ -157,7 +200,9 @@ export default function AdminGymsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">지점명</label>
+                <label className="block text-sm font-medium mb-2">
+                  <span className="text-red-500">지점명 *</span>
+                </label>
                 <input
                   required
                   type="text"
@@ -172,26 +217,9 @@ export default function AdminGymsPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  암장 전체 이름
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="예: 더클라임 일산점"
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
                   Instagram URL
                 </label>
                 <input
-                  required
                   type="url"
                   value={formData.instagramUrl}
                   onChange={(e) => {
@@ -202,7 +230,7 @@ export default function AdminGymsPage() {
                       instagramHandle: extractInstagramHandle(url),
                     });
                   }}
-                  placeholder="https://www.instagram.com/username"
+                  placeholder="https://www.instagram.com/username (선택사항)"
                   className="w-full p-2 border rounded-lg"
                 />
               </div>
@@ -264,7 +292,7 @@ export default function AdminGymsPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                암장
+                지점
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 브랜드
@@ -285,8 +313,7 @@ export default function AdminGymsPage() {
               <tr key={gym.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div>
-                    <p className="font-medium">{gym.name}</p>
-                    <p className="text-sm text-gray-500">{gym.branchName}</p>
+                    <p className="font-medium">{gym.branchName}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -295,14 +322,19 @@ export default function AdminGymsPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <a
-                    href={gym.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-pink-600 hover:text-pink-700"
-                  >
-                    <Instagram className="w-4 h-4" />@{gym.instagramHandle}
-                  </a>
+                  {gym.instagramUrl ? (
+                    <a
+                      href={gym.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-pink-600 hover:text-pink-700"
+                    >
+                      <Instagram className="w-4 h-4" />@
+                      {gym.instagramHandle || "Instagram"}
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 text-sm">없음</span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
@@ -321,17 +353,33 @@ export default function AdminGymsPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleEdit(gym)}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(gym)}
+                      className="text-blue-600 hover:text-blue-700"
+                      title="수정"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(gym)}
+                      className="text-red-600 hover:text-red-700"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {gyms.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            등록된 암장이 없습니다. 새 암장을 추가해보세요!
+          </div>
+        )}
       </div>
     </div>
   );

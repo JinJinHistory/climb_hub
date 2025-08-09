@@ -16,7 +16,11 @@ export default function AdminUpdatesListPage() {
   const [filterGym, setFilterGym] = useState<string>("all");
 
   // 업데이트 목록 가져오기
-  const { data: updatesData, loading: updatesLoading, refetch: refetchUpdates } = useQuery(GET_ROUTE_UPDATES, {
+  const {
+    data: updatesData,
+    loading: updatesLoading,
+    refetch: refetchUpdates,
+  } = useQuery(GET_ROUTE_UPDATES, {
     variables: {
       limit: 1000, // 충분한 데이터를 가져오기 위해 큰 값 설정
     },
@@ -190,7 +194,9 @@ export default function AdminUpdatesListPage() {
                   colSpan={5}
                   className="px-6 py-12 text-center text-gray-500"
                 >
-                  업데이트가 없습니다
+                  {updates.length === 0
+                    ? "등록된 업데이트가 없습니다. 새 업데이트를 추가해보세요!"
+                    : "조건에 맞는 업데이트가 없습니다. 필터를 조정해보세요."}
                 </td>
               </tr>
             ) : (
