@@ -68,9 +68,13 @@ export default function AdminBrandsPage() {
       setEditingBrand(null);
       setShowForm(false);
       refetchBrands();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving brand:", error);
-      alert("오류가 발생했습니다.");
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "오류가 발생했습니다.";
+      alert(errorMessage);
     }
   };
 
@@ -139,9 +143,13 @@ export default function AdminBrandsPage() {
         }이 삭제되었습니다.`
       );
       refetchBrands();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting brand:", error);
-      alert("삭제 중 오류가 발생했습니다.");
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "삭제 중 오류가 발생했습니다.";
+      alert(errorMessage);
     }
   };
 

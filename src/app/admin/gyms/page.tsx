@@ -90,9 +90,13 @@ export default function AdminGymsPage() {
       setEditingGym(null);
       setShowForm(false);
       refetchGyms();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving gym:", error);
-      alert("오류가 발생했습니다.");
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "오류가 발생했습니다.";
+      alert(errorMessage);
     }
   };
 
@@ -122,11 +126,13 @@ export default function AdminGymsPage() {
       });
       alert("암장이 삭제되었습니다!");
       refetchGyms();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting gym:", error);
-      alert(
-        "삭제 중 오류가 발생했습니다. 해당 암장에 연결된 데이터가 있는지 확인해주세요."
-      );
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "삭제 중 오류가 발생했습니다. 해당 암장에 연결된 데이터가 있는지 확인해주세요.";
+      alert(errorMessage);
     }
   };
 

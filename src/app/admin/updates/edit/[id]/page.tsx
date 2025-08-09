@@ -8,6 +8,7 @@ import { GET_ROUTE_UPDATE, GET_ALL_GYMS } from "@/graphql/queries";
 import { UPDATE_ROUTE_UPDATE } from "@/graphql/mutations";
 import { format } from "date-fns";
 import Link from "next/link";
+import { UpdateType } from "@/types";
 
 export default function AdminUpdateEditPage() {
   const params = useParams();
@@ -17,7 +18,7 @@ export default function AdminUpdateEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     gymId: "",
-    type: "newset" as const,
+    type: "NEWSET" as UpdateType,
     updateDate: "",
     title: "",
     description: "",
@@ -44,10 +45,21 @@ export default function AdminUpdateEditPage() {
   useEffect(() => {
     if (updateData?.routeUpdate) {
       const update = updateData.routeUpdate;
+
+      // updateDate 형식 확인 및 변환
+      let formattedDate = update.updateDate;
+      if (update.updateDate) {
+        // 만약 ISO 형식이라면 YYYY-MM-DD로 변환
+        const date = new Date(update.updateDate);
+        if (!isNaN(date.getTime())) {
+          formattedDate = date.toISOString().split("T")[0];
+        }
+      }
+
       setFormData({
         gymId: update.gymId,
         type: update.type,
-        updateDate: update.updateDate,
+        updateDate: formattedDate,
         title: update.title || "",
         description: update.description || "",
         instagramPostUrl: update.instagramPostUrl || "",
@@ -72,19 +84,23 @@ export default function AdminUpdateEditPage() {
 
       alert("업데이트가 수정되었습니다!");
       router.push("/admin/updates/list");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating:", error);
-      alert("오류가 발생했습니다.");
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "오류가 발생했습니다.";
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
   const updateTypes = [
-    { value: "newset", label: "뉴셋", color: "text-green-600" },
-    { value: "removal", label: "탈거", color: "text-red-600" },
-    { value: "partial_removal", label: "부분탈거", color: "text-orange-600" },
-    { value: "announcement", label: "공지", color: "text-blue-600" },
+    { value: "NEWSET", label: "뉴셋", color: "text-green-600" },
+    { value: "REMOVAL", label: "탈거", color: "text-red-600" },
+
+    { value: "ANNOUNCEMENT", label: "공지", color: "text-blue-600" },
   ];
 
   const gyms = gymsData?.gyms || [];
@@ -160,7 +176,7 @@ export default function AdminUpdateEditPage() {
             <label className="block text-sm font-medium mb-2">
               업데이트 타입
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {updateTypes.map((type) => (
                 <button
                   key={type.value}
@@ -185,8 +201,23 @@ export default function AdminUpdateEditPage() {
           <div>
             <label className="block text-sm font-medium mb-2">
               <Calendar className="inline w-4 h-4 mr-1" />
-              업데이트 날짜
+              {formData.type === "NEWSET" && "🆕 세팅일"}
+              {formData.type === "REMOVAL" && "⚠️ 탈거일"}
+
+              {formData.type === "ANNOUNCEMENT" && "📢 공지일"}
+              {!formData.type && "업데이트 날짜"}
             </label>
+            {formData.type === "REMOVAL" && (
+              <p className="text-sm text-red-600 mb-2">
+                💡 탈거 시작 시간도 제목이나 설명에 명시해주세요 (예: 23시부터
+                탈거)
+              </p>
+            )}
+            {formData.type === "NEWSET" && (
+              <p className="text-sm text-green-600 mb-2">
+                💡 세팅 완료 예상 시간이나 오픈 시간을 설명에 추가해주세요
+              </p>
+            )}
             <input
               type="date"
               required
@@ -201,10 +232,11 @@ export default function AdminUpdateEditPage() {
           {/* 제목 */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              제목 (선택사항)
+              제목 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
+              required
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -216,9 +248,10 @@ export default function AdminUpdateEditPage() {
 
           {/* 설명 */}
           <div>
-            <label className="block text-sm font-medium mb-2">설명</label>
+            <label className="block text-sm font-medium mb-2">
+              설명 (선택사항)
+            </label>
             <textarea
-              required
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })

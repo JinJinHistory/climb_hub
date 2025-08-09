@@ -6,6 +6,25 @@ const formatDate = (date: any): string => {
   return new Date(date).toISOString();
 };
 
+const formatDateOnly = (date: any): string => {
+  if (!date) return "";
+
+  // 이미 YYYY-MM-DD 형식이면 그대로 반환
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+
+  // DATE 타입을 YYYY-MM-DD 형식으로 반환 (시간대 변환 없이)
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+
+  // UTC가 아닌 로컬 시간으로 YYYY-MM-DD 반환
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const resolvers = {
   Query: {
     brands: async () => {
@@ -137,7 +156,7 @@ export const resolvers = {
       if (type) {
         const whereClause = gymId ? "AND" : "WHERE";
         query += ` ${whereClause} ru.type = $${paramIndex}`;
-        params.push(type.toLowerCase());
+        params.push(type);
         paramIndex++;
       }
 
@@ -150,7 +169,20 @@ export const resolvers = {
 
       const result = await pool.query(query, params);
       return result.rows.map((row) => ({
-        ...row,
+        id: row.id,
+        gymId: row.gym_id,
+        type: row.type,
+        updateDate: formatDateOnly(row.update_date),
+        title: row.title,
+        description: row.description,
+        instagramPostUrl: row.instagram_post_url,
+        instagramPostId: row.instagram_post_id,
+        imageUrls: row.image_urls,
+        rawCaption: row.raw_caption,
+        parsedData: row.parsed_data,
+        isVerified: row.is_verified,
+        createdAt: formatDate(row.created_at),
+        updatedAt: formatDate(row.updated_at),
         gym: {
           id: row.gym_id,
           name: row.gym_name,
@@ -182,7 +214,20 @@ export const resolvers = {
       if (!row) return null;
 
       return {
-        ...row,
+        id: row.id,
+        gymId: row.gym_id,
+        type: row.type,
+        updateDate: formatDateOnly(row.update_date),
+        title: row.title,
+        description: row.description,
+        instagramPostUrl: row.instagram_post_url,
+        instagramPostId: row.instagram_post_id,
+        imageUrls: row.image_urls,
+        rawCaption: row.raw_caption,
+        parsedData: row.parsed_data,
+        isVerified: row.is_verified,
+        createdAt: formatDate(row.created_at),
+        updatedAt: formatDate(row.updated_at),
         gym: {
           id: row.gym_id,
           name: row.gym_name,
@@ -263,18 +308,30 @@ export const resolvers = {
 
   Mutation: {
     createBrand: async (_: any, { input }: { input: any }) => {
-      const result = await pool.query(
-        "INSERT INTO brands (name, logo_url, website_url) VALUES ($1, $2, $3) RETURNING *",
-        [input.name, input.logoUrl, input.websiteUrl]
-      );
-      const row = result.rows[0];
-      return {
-        ...row,
-        logoUrl: row.logo_url,
-        websiteUrl: row.website_url,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
-      };
+      try {
+        const result = await pool.query(
+          "INSERT INTO brands (name, logo_url, website_url) VALUES ($1, $2, $3) RETURNING *",
+          [input.name, input.logoUrl, input.websiteUrl]
+        );
+        const row = result.rows[0];
+        return {
+          ...row,
+          logoUrl: row.logo_url,
+          websiteUrl: row.website_url,
+          createdAt: formatDate(row.created_at),
+          updatedAt: formatDate(row.updated_at),
+        };
+      } catch (error: any) {
+        if (
+          error.code === "23505" &&
+          error.constraint === "unique_brand_name"
+        ) {
+          throw new Error(
+            `브랜드명 "${input.name}"이 이미 존재합니다. 다른 이름을 사용해주세요.`
+          );
+        }
+        throw error;
+      }
     },
 
     updateBrand: async (_: any, { id, input }: { id: string; input: any }) => {
@@ -299,20 +356,32 @@ export const resolvers = {
       }
 
       values.push(id);
-      const result = await pool.query(
-        `UPDATE brands SET ${fields.join(
-          ", "
-        )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
-        values
-      );
-      const row = result.rows[0];
-      return {
-        ...row,
-        logoUrl: row.logo_url,
-        websiteUrl: row.website_url,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
-      };
+      try {
+        const result = await pool.query(
+          `UPDATE brands SET ${fields.join(
+            ", "
+          )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
+          values
+        );
+        const row = result.rows[0];
+        return {
+          ...row,
+          logoUrl: row.logo_url,
+          websiteUrl: row.website_url,
+          createdAt: formatDate(row.created_at),
+          updatedAt: formatDate(row.updated_at),
+        };
+      } catch (error: any) {
+        if (
+          error.code === "23505" &&
+          error.constraint === "unique_brand_name"
+        ) {
+          throw new Error(
+            `브랜드명 "${input.name}"이 이미 존재합니다. 다른 이름을 사용해주세요.`
+          );
+        }
+        throw error;
+      }
     },
 
     deleteBrand: async (_: any, { id }: { id: string }) => {
@@ -321,50 +390,72 @@ export const resolvers = {
     },
 
     createGym: async (_: any, { input }: { input: any }) => {
-      const result = await pool.query(
-        `
-        INSERT INTO gyms (brand_id, name, branch_name, instagram_url, instagram_handle, address, phone, latitude, longitude, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING *
-      `,
-        [
-          input.brandId,
-          input.name,
-          input.branchName,
-          input.instagramUrl,
-          input.instagramHandle,
-          input.address,
-          input.phone,
-          input.latitude,
-          input.longitude,
-          input.isActive,
-        ]
-      );
+      try {
+        const result = await pool.query(
+          `
+          INSERT INTO gyms (brand_id, name, branch_name, instagram_url, instagram_handle, address, phone, latitude, longitude, is_active)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          RETURNING *
+        `,
+          [
+            input.brandId,
+            input.name,
+            input.branchName,
+            input.instagramUrl,
+            input.instagramHandle,
+            input.address,
+            input.phone,
+            input.latitude,
+            input.longitude,
+            input.isActive,
+          ]
+        );
 
-      const gym = result.rows[0];
-      const brandResult = await pool.query(
-        "SELECT * FROM brands WHERE id = $1",
-        [gym.brand_id]
-      );
-      const brand = brandResult.rows[0];
+        const gym = result.rows[0];
+        const brandResult = await pool.query(
+          "SELECT * FROM brands WHERE id = $1",
+          [gym.brand_id]
+        );
+        const brand = brandResult.rows[0];
 
-      return {
-        ...gym,
-        brandId: gym.brand_id,
-        branchName: gym.branch_name,
-        instagramUrl: gym.instagram_url,
-        instagramHandle: gym.instagram_handle,
-        isActive: gym.is_active,
-        createdAt: formatDate(gym.created_at),
-        updatedAt: formatDate(gym.updated_at),
-        brand: {
-          ...brand,
-          logoUrl: brand.logo_url,
-          websiteUrl: brand.website_url,
-          createdAt: formatDate(brand.created_at),
-          updatedAt: formatDate(brand.updated_at),
-        },
-      };
+        return {
+          ...gym,
+          brandId: gym.brand_id,
+          branchName: gym.branch_name,
+          instagramUrl: gym.instagram_url,
+          instagramHandle: gym.instagram_handle,
+          isActive: gym.is_active,
+          createdAt: formatDate(gym.created_at),
+          updatedAt: formatDate(gym.updated_at),
+          brand: {
+            ...brand,
+            logoUrl: brand.logo_url,
+            websiteUrl: brand.website_url,
+            createdAt: formatDate(brand.created_at),
+            updatedAt: formatDate(brand.updated_at),
+          },
+        };
+      } catch (error: any) {
+        if (error.code === "23505") {
+          if (error.constraint === "unique_brand_branch") {
+            // 브랜드명 조회
+            const brandResult = await pool.query(
+              "SELECT name FROM brands WHERE id = $1",
+              [input.brandId]
+            );
+            const brandName = brandResult.rows[0]?.name || "해당 브랜드";
+            throw new Error(
+              `${brandName}에 "${input.branchName}" 지점이 이미 존재합니다. 다른 지점명을 사용해주세요.`
+            );
+          }
+          if (error.constraint === "unique_instagram_handle") {
+            throw new Error(
+              `인스타그램 핸들 "${input.instagramHandle}"이 이미 사용 중입니다. 다른 핸들을 사용해주세요.`
+            );
+          }
+        }
+        throw error;
+      }
     },
 
     updateGym: async (_: any, { id, input }: { id: string; input: any }) => {
@@ -424,37 +515,67 @@ export const resolvers = {
       }
 
       values.push(id);
-      const result = await pool.query(
-        `UPDATE gyms SET ${fields.join(
-          ", "
-        )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
-        values
-      );
+      try {
+        const result = await pool.query(
+          `UPDATE gyms SET ${fields.join(
+            ", "
+          )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
+          values
+        );
 
-      const gym = result.rows[0];
-      const brandResult = await pool.query(
-        "SELECT * FROM brands WHERE id = $1",
-        [gym.brand_id]
-      );
-      const brand = brandResult.rows[0];
+        const gym = result.rows[0];
+        const brandResult = await pool.query(
+          "SELECT * FROM brands WHERE id = $1",
+          [gym.brand_id]
+        );
+        const brand = brandResult.rows[0];
 
-      return {
-        ...gym,
-        brandId: gym.brand_id,
-        branchName: gym.branch_name,
-        instagramUrl: gym.instagram_url,
-        instagramHandle: gym.instagram_handle,
-        isActive: gym.is_active,
-        createdAt: formatDate(gym.created_at),
-        updatedAt: formatDate(gym.updated_at),
-        brand: {
-          ...brand,
-          logoUrl: brand.logo_url,
-          websiteUrl: brand.website_url,
-          createdAt: formatDate(brand.created_at),
-          updatedAt: formatDate(brand.updated_at),
-        },
-      };
+        return {
+          ...gym,
+          brandId: gym.brand_id,
+          branchName: gym.branch_name,
+          instagramUrl: gym.instagram_url,
+          instagramHandle: gym.instagram_handle,
+          isActive: gym.is_active,
+          createdAt: formatDate(gym.created_at),
+          updatedAt: formatDate(gym.updated_at),
+          brand: {
+            ...brand,
+            logoUrl: brand.logo_url,
+            websiteUrl: brand.website_url,
+            createdAt: formatDate(brand.created_at),
+            updatedAt: formatDate(brand.updated_at),
+          },
+        };
+      } catch (error: any) {
+        if (error.code === "23505") {
+          if (error.constraint === "unique_brand_branch") {
+            // 브랜드명 조회 - 현재 암장의 브랜드 또는 새로 설정할 브랜드
+            let targetBrandId = input.brandId;
+            if (!targetBrandId) {
+              const currentGymResult = await pool.query(
+                "SELECT brand_id FROM gyms WHERE id = $1",
+                [id]
+              );
+              targetBrandId = currentGymResult.rows[0]?.brand_id;
+            }
+            const brandResult = await pool.query(
+              "SELECT name FROM brands WHERE id = $1",
+              [targetBrandId]
+            );
+            const brandName = brandResult.rows[0]?.name || "해당 브랜드";
+            throw new Error(
+              `${brandName}에 "${input.branchName}" 지점이 이미 존재합니다. 다른 지점명을 사용해주세요.`
+            );
+          }
+          if (error.constraint === "unique_instagram_handle") {
+            throw new Error(
+              `인스타그램 핸들 "${input.instagramHandle}"이 이미 사용 중입니다. 다른 핸들을 사용해주세요.`
+            );
+          }
+        }
+        throw error;
+      }
     },
 
     deleteGym: async (_: any, { id }: { id: string }) => {
@@ -496,7 +617,20 @@ export const resolvers = {
       );
 
       return {
-        ...update,
+        id: update.id,
+        gymId: update.gym_id,
+        type: update.type,
+        updateDate: formatDateOnly(update.update_date),
+        title: update.title,
+        description: update.description,
+        instagramPostUrl: update.instagram_post_url,
+        instagramPostId: update.instagram_post_id,
+        imageUrls: update.image_urls,
+        rawCaption: update.raw_caption,
+        parsedData: update.parsed_data,
+        isVerified: update.is_verified,
+        createdAt: formatDate(update.created_at),
+        updatedAt: formatDate(update.updated_at),
         gym: {
           id: gymResult.rows[0].id,
           name: gymResult.rows[0].name,
@@ -595,7 +729,20 @@ export const resolvers = {
       );
 
       return {
-        ...update,
+        id: update.id,
+        gymId: update.gym_id,
+        type: update.type,
+        updateDate: formatDateOnly(update.update_date),
+        title: update.title,
+        description: update.description,
+        instagramPostUrl: update.instagram_post_url,
+        instagramPostId: update.instagram_post_id,
+        imageUrls: update.image_urls,
+        rawCaption: update.raw_caption,
+        parsedData: update.parsed_data,
+        isVerified: update.is_verified,
+        createdAt: formatDate(update.created_at),
+        updatedAt: formatDate(update.updated_at),
         gym: {
           id: gymResult.rows[0].id,
           name: gymResult.rows[0].name,
@@ -788,7 +935,20 @@ export const resolvers = {
       );
 
       return result.rows.map((row) => ({
-        ...row,
+        id: row.id,
+        gymId: row.gym_id,
+        type: row.type,
+        updateDate: formatDateOnly(row.update_date),
+        title: row.title,
+        description: row.description,
+        instagramPostUrl: row.instagram_post_url,
+        instagramPostId: row.instagram_post_id,
+        imageUrls: row.image_urls,
+        rawCaption: row.raw_caption,
+        parsedData: row.parsed_data,
+        isVerified: row.is_verified,
+        createdAt: formatDate(row.created_at),
+        updatedAt: formatDate(row.updated_at),
         gym: {
           id: row.gym_id,
           name: row.gym_name,

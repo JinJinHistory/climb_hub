@@ -7,6 +7,19 @@ import { useQuery } from "@apollo/client";
 import { GET_ROUTE_UPDATES } from "@/graphql/queries";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { RouteUpdate } from "@/types";
+
+// 안전한 날짜 포맷팅 함수
+const safeFormatDate = (
+  dateString: string | null | undefined,
+  formatString: string,
+  options?: any
+) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
+  return format(date, formatString, options);
+};
 
 interface Stats {
   totalGyms: number;
@@ -17,10 +30,10 @@ interface Stats {
 
 interface RecentUpdate {
   id: string;
-  gym: { name: string; branch_name: string };
+  gym: { name: string; branchName: string };
   type: string;
-  update_date: string;
-  created_at: string;
+  updateDate: string;
+  createdAt: string;
 }
 
 export default function AdminDashboard() {
@@ -38,11 +51,11 @@ export default function AdminDashboard() {
   const recentUpdates = updates.slice(0, 5);
 
   const todayUpdates = updates.filter(
-    (update) => new Date(update.createdAt) >= today
+    (update: RouteUpdate) => new Date(update.createdAt) >= today
   ).length;
 
   const thisWeekUpdates = updates.filter(
-    (update) => new Date(update.createdAt) >= weekAgo
+    (update: RouteUpdate) => new Date(update.createdAt) >= weekAgo
   ).length;
 
   const stats = {
@@ -54,13 +67,10 @@ export default function AdminDashboard() {
 
   const getUpdateTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
-      newset: { label: "뉴셋", color: "bg-green-100 text-green-800" },
-      removal: { label: "탈거", color: "bg-red-100 text-red-800" },
-      partial_removal: {
-        label: "부분탈거",
-        color: "bg-orange-100 text-orange-800",
-      },
-      announcement: { label: "공지", color: "bg-blue-100 text-blue-800" },
+      NEWSET: { label: "뉴셋", color: "bg-green-100 text-green-800" },
+      REMOVAL: { label: "탈거", color: "bg-red-100 text-red-800" },
+
+      ANNOUNCEMENT: { label: "공지", color: "bg-blue-100 text-blue-800" },
     };
     return types[type] || { label: type, color: "bg-gray-100 text-gray-800" };
   };
@@ -173,7 +183,7 @@ export default function AdminDashboard() {
               등록된 업데이트가 없습니다. 새 업데이트를 추가해보세요!
             </div>
           ) : (
-            recentUpdates.map((update) => {
+            recentUpdates.map((update: RouteUpdate) => {
               const typeInfo = getUpdateTypeLabel(update.type);
               return (
                 <div key={update.id} className="p-6 hover:bg-gray-50">
@@ -187,14 +197,24 @@ export default function AdminDashboard() {
                       <div>
                         <p className="font-medium">{update.gym?.name}</p>
                         <p className="text-sm text-gray-600">
-                          {format(new Date(update.update_date), "M월 d일 (E)", {
-                            locale: ko,
-                          })}
+                          {update.type === "NEWSET" && "뉴셋 일자: "}
+                          {update.type === "REMOVAL" && "탈거 예정일: "}
+
+                          {update.type === "ANNOUNCEMENT" && "공지 일자: "}
+                          {safeFormatDate(
+                            update.updateDate,
+                            "yyyy년 MM월 dd일 (E)",
+                            {
+                              locale: ko,
+                            }
+                          ) || "날짜 없음"}
                         </p>
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {format(new Date(update.created_at), "yyyy-MM-dd HH:mm")}
+                      작성:{" "}
+                      {safeFormatDate(update.createdAt, "yyyy/MM/dd HH:mm") ||
+                        "생성일 없음"}
                     </div>
                   </div>
                 </div>

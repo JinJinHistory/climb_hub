@@ -9,6 +9,18 @@ import { DELETE_ROUTE_UPDATE } from "@/graphql/mutations";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
+// 안전한 날짜 포맷팅 함수
+const safeFormatDate = (
+  dateString: string | null | undefined,
+  formatString: string,
+  options?: any
+) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
+  return format(date, formatString, options);
+};
+
 export default function AdminUpdatesListPage() {
   const [filteredUpdates, setFilteredUpdates] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,21 +91,22 @@ export default function AdminUpdatesListPage() {
 
       alert("삭제되었습니다.");
       refetchUpdates();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting update:", error);
-      alert("삭제 중 오류가 발생했습니다.");
+      const errorMessage =
+        error?.graphQLErrors?.[0]?.message ||
+        error?.message ||
+        "삭제 중 오류가 발생했습니다.";
+      alert(errorMessage);
     }
   };
 
   const getUpdateTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
-      newset: { label: "뉴셋", color: "bg-green-100 text-green-800" },
-      removal: { label: "탈거", color: "bg-red-100 text-red-800" },
-      partial_removal: {
-        label: "부분탈거",
-        color: "bg-orange-100 text-orange-800",
-      },
-      announcement: { label: "공지", color: "bg-blue-100 text-blue-800" },
+      NEWSET: { label: "뉴셋", color: "bg-green-100 text-green-800" },
+      REMOVAL: { label: "탈거", color: "bg-red-100 text-red-800" },
+
+      ANNOUNCEMENT: { label: "공지", color: "bg-blue-100 text-blue-800" },
     };
     return types[type] || { label: type, color: "bg-gray-100 text-gray-800" };
   };
@@ -138,10 +151,10 @@ export default function AdminUpdatesListPage() {
             className="p-2 border rounded-lg"
           >
             <option value="all">모든 타입</option>
-            <option value="newset">뉴셋</option>
-            <option value="removal">탈거</option>
-            <option value="partial_removal">부분탈거</option>
-            <option value="announcement">공지</option>
+            <option value="NEWSET">뉴셋</option>
+            <option value="REMOVAL">탈거</option>
+
+            <option value="ANNOUNCEMENT">공지</option>
           </select>
 
           <select
@@ -171,7 +184,10 @@ export default function AdminUpdatesListPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                날짜
+                작성일
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                업데이트일
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 암장
@@ -209,12 +225,23 @@ export default function AdminUpdatesListPage() {
                         <Calendar className="w-4 h-4 text-gray-400 mr-2" />
                         <div>
                           <p className="text-sm font-medium">
-                            {format(new Date(update.updateDate), "yyyy-MM-dd")}
+                            {safeFormatDate(update.createdAt, "yyyy-MM-dd") ||
+                              "날짜 없음"}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {format(new Date(update.createdAt), "HH:mm")}
+                            {safeFormatDate(update.createdAt, "HH:mm") ||
+                              "--:--"}
                           </p>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                        <p className="text-sm font-medium">
+                          {safeFormatDate(update.updateDate, "yyyy-MM-dd") ||
+                            "날짜 없음"}
+                        </p>
                       </div>
                     </td>
                     <td className="px-6 py-4">

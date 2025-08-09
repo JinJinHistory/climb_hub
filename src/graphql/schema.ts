@@ -1,4 +1,4 @@
-import { gql } from 'apollo-server-micro';
+import { gql } from "apollo-server-micro";
 
 export const typeDefs = gql`
   type Brand {
@@ -63,7 +63,6 @@ export const typeDefs = gql`
   enum UpdateType {
     NEWSET
     REMOVAL
-    PARTIAL_REMOVAL
     ANNOUNCEMENT
   }
 
@@ -193,4 +192,4 @@ export const typeDefs = gql`
     startedAt: String
     completedAt: String
   }
-`; 
+`;

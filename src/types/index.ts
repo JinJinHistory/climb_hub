@@ -27,7 +27,7 @@ export interface Gym {
 export interface RouteUpdate {
   id: string;
   gymId: string;
-  type: 'newset' | 'removal' | 'partial_removal' | 'announcement';
+  type: "NEWSET" | "REMOVAL" | "ANNOUNCEMENT";
   updateDate: string;
   title?: string;
   description?: string;
@@ -45,7 +45,7 @@ export interface RouteUpdate {
 export interface CrawlLog {
   id: string;
   gymId: string;
-  status: 'success' | 'failed' | 'partial';
+  status: "success" | "failed" | "partial";
   postsFound: number;
   postsNew: number;
   errorMessage?: string;
@@ -55,8 +55,8 @@ export interface CrawlLog {
   gym?: Gym;
 }
 
-export type UpdateType = 'newset' | 'removal' | 'partial_removal' | 'announcement';
-export type CrawlStatus = 'success' | 'failed' | 'partial';
+export type UpdateType = "NEWSET" | "REMOVAL" | "ANNOUNCEMENT";
+export type CrawlStatus = "success" | "failed" | "partial";
 
 export interface ParsedRouteData {
   routes?: {
