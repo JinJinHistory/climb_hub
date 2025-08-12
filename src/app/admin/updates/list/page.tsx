@@ -60,7 +60,7 @@ export default function AdminUpdatesListPage() {
     if (searchTerm) {
       filtered = filtered.filter(
         (update) =>
-          update.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          update.title?.toLowerCase().includes(searchTerm.toLowerCase()) || // 섹터/벽 정보
           update.description
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
@@ -138,7 +138,7 @@ export default function AdminUpdatesListPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="검색..."
+              placeholder="섹터, 암장명, 설명으로 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border rounded-lg"
@@ -264,8 +264,8 @@ export default function AdminUpdatesListPage() {
                     <td className="px-6 py-4">
                       <div className="max-w-xs">
                         {update.title && (
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {update.title}
+                          <p className="text-sm font-medium text-blue-700 truncate">
+                            🧗‍♀️ {update.title}
                           </p>
                         )}
                         {update.description && (

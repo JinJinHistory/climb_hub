@@ -174,10 +174,10 @@ export default function AdminUpdatesPage() {
             />
           </div>
 
-          {/* 제목 */}
+          {/* 섹터 */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              제목 <span className="text-red-500">*</span>
+              섹터/벽 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -186,9 +186,12 @@ export default function AdminUpdatesPage() {
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
-              placeholder="예: 1월 3주차 뉴셋"
+              placeholder="예: A벽, B구역, 루프탑, 오버행벽"
               className="w-full p-2 border rounded-lg"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              업데이트가 적용되는 구체적인 벽이나 구역을 입력하세요
+            </p>
           </div>
 
           {/* 설명 */}

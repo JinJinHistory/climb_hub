@@ -178,27 +178,57 @@ export default function HomePage() {
                 key={update.id}
                 className={`bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow ${urgencyClass}`}
               >
-                <div className="flex items-start justify-between mb-3">
+                {/* 1. 타입 & 2. 업데이트 날짜 (최상단, 가장 중요) */}
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${typeInfo.color}`}
+                      className={`px-4 py-2 rounded-full text-sm font-bold ${typeInfo.color}`}
                     >
                       {typeInfo.label}
                     </span>
-                    <h3 className="font-semibold text-lg">
-                      {update.gym?.name || "알 수 없는 암장"}
-                    </h3>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      {dateInfo.label}
-                    </div>
-                    <time className="text-sm text-gray-600">
+                    <time className="text-lg font-semibold text-gray-900">
                       {dateInfo.date}
                     </time>
                   </div>
+                  {/* 6. 인스타 링크 (우측 상단) */}
+                  {update.instagramPostUrl && (
+                    <a
+                      href={update.instagramPostUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:text-green-700 font-medium text-sm"
+                    >
+                      Instagram에서 보기
+                    </a>
+                  )}
                 </div>
 
+                {/* 3. 브랜드 & 4. 지점 (두 번째 줄) */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 text-gray-800">
+                    <span className="font-semibold text-lg">
+                      {update.gym?.brand?.name || "브랜드 미상"}
+                    </span>
+                    <span className="text-gray-400">•</span>
+                    <span className="font-medium text-base flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      {update.gym?.branchName ||
+                        update.gym?.name ||
+                        "지점 미상"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. 벽(섹터) - title 필드 활용 */}
+                {update.title && (
+                  <div className="mb-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                      🧗‍♀️ {update.title}
+                    </span>
+                  </div>
+                )}
+
+                {/* 부가 정보 */}
                 {dateInfo.subtitle && (
                   <div
                     className={`text-sm mb-3 ${
@@ -211,44 +241,16 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {update.title && (
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {update.title}
-                  </h4>
-                )}
-
                 {update.description && (
                   <p className="text-gray-700 mb-3 whitespace-pre-wrap">
                     {update.description}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      {update.gym?.branchName}
-                    </span>
-                    <span
-                      className="flex items-center gap-1"
-                      title="정보 작성 일시"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      작성:{" "}
-                      {safeFormatDate(update.createdAt, "yyyy/MM/dd") ||
-                        "--:--"}
-                    </span>
-                  </div>
-                  {update.instagramPostUrl && (
-                    <a
-                      href={update.instagramPostUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:text-green-700 font-medium"
-                    >
-                      Instagram에서 보기
-                    </a>
-                  )}
+                {/* 작성일자 (하단) */}
+                <div className="text-xs text-gray-400 mt-4">
+                  작성:{" "}
+                  {safeFormatDate(update.createdAt, "yyyy/MM/dd") || "--:--"}
                 </div>
               </article>
             );
