@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, MapPin, RefreshCw } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  Calendar,
+  MapPin,
+  RefreshCw,
+  Search,
+  Filter,
+  Heart,
+  Bell,
+} from "lucide-react";
 import { useQuery } from "@apollo/client";
 import { GET_ROUTE_UPDATES } from "@/graphql/queries";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { RouteUpdate } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import Button from "@/components/ui/button";
+import Toggle from "@/components/ui/toggle";
 
 // 안전한 날짜 포맷팅 함수
 const safeFormatDate = (
@@ -34,6 +45,7 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
         date: fullDate,
         subtitle: "새로운 루트를 만나보세요!",
         urgency: "normal",
+        color: "bg-green-100 text-green-800",
       };
     case "REMOVAL":
       return {
@@ -41,14 +53,15 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
         date: fullDate,
         subtitle: "마지막 기회를 놓치지 마세요!",
         urgency: "high",
+        color: "bg-red-100 text-red-800",
       };
-
     case "ANNOUNCEMENT":
       return {
         label: "📢 공지 일자",
         date: fullDate,
         subtitle: "중요한 안내사항입니다",
         urgency: "normal",
+        color: "bg-blue-100 text-blue-800",
       };
     default:
       return {
@@ -56,16 +69,22 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
         date: fullDate || "날짜 없음",
         subtitle: "",
         urgency: "normal",
+        color: "bg-gray-100 text-gray-800",
       };
   }
 };
 
 export default function HomePage() {
-  const [selectedType, setSelectedType] = useState<string | null>(null); // 기본값: 전체
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("all");
+  const [showOnlyRecent, setShowOnlyRecent] = useState(false);
+  const [sortBy, setSortBy] = useState("date");
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   const { data, loading, error, refetch } = useQuery(GET_ROUTE_UPDATES, {
     variables: {
-      limit: 20,
+      limit: 50,
       type: selectedType,
     },
   });
@@ -95,168 +114,441 @@ export default function HomePage() {
     },
   ];
 
+  const regions = [
+    { value: "all", label: "전체" },
+    { value: "seoul", label: "수도권" },
+    { value: "non-seoul", label: "비수도권" },
+  ];
+
+  const sortOptions = [
+    { value: "date", label: "날짜순" },
+    { value: "gym", label: "암장순" },
+    { value: "type", label: "타입순" },
+  ];
+
+  // 필터링된 업데이트 목록
+  const filteredUpdates = useMemo(() => {
+    let filtered = updates.filter((update: RouteUpdate) => {
+      // 검색어 필터
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          update.gym?.name?.toLowerCase().includes(searchLower) ||
+          update.gym?.branchName?.toLowerCase().includes(searchLower) ||
+          update.title?.toLowerCase().includes(searchLower) ||
+          update.description?.toLowerCase().includes(searchLower)
+        );
+      }
+      return true;
+    });
+
+    // 최근 업데이트만 보기
+    if (showOnlyRecent) {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      filtered = filtered.filter(
+        (update: RouteUpdate) => new Date(update.createdAt) >= weekAgo
+      );
+    }
+
+    // 정렬
+    filtered.sort((a: RouteUpdate, b: RouteUpdate) => {
+      switch (sortBy) {
+        case "date":
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        case "gym":
+          return (a.gym?.name || "").localeCompare(b.gym?.name || "");
+        case "type":
+          return a.type.localeCompare(b.type);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [updates, searchTerm, showOnlyRecent, sortBy]);
+
   const handleRefresh = async () => {
     await refetch();
   };
 
-  const getUpdateTypeLabel = (type: string) => {
-    const typeInfo = updateTypes.find((t) => t.value === type);
-    if (typeInfo) {
-      return {
-        label: typeInfo.label,
-        color: typeInfo.color.split(" ").slice(0, 2).join(" "),
-      };
-    }
-    return { label: type, color: "bg-gray-100 text-gray-800" };
+  const toggleFavorite = (id: string) => {
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id]
+    );
   };
 
-  const filteredUpdates = updates;
+  // 통계 계산
+  const stats = useMemo(() => {
+    const totalUpdates = updates.length;
+    const newsetCount = updates.filter(
+      (u: RouteUpdate) => u.type === "NEWSET"
+    ).length;
+    const removalCount = updates.filter(
+      (u: RouteUpdate) => u.type === "REMOVAL"
+    ).length;
+    const announcementCount = updates.filter(
+      (u: RouteUpdate) => u.type === "ANNOUNCEMENT"
+    ).length;
+
+    return { totalUpdates, newsetCount, removalCount, announcementCount };
+  }, [updates]);
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-6">
+    <main className="max-w-6xl mx-auto px-4 py-6">
       {/* Header */}
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Climb Hub</h1>
-        <p className="text-gray-600">
-          전국 클라이밍 암장의 최신 뉴셋 정보를 한눈에
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Climb Hub</h1>
+            <p className="text-gray-600">
+              전국 클라이밍 암장의 최신 뉴셋 정보를 한눈에
+            </p>
+          </div>
+          <nav className="flex items-center space-x-6">
+            <button className="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">
+              뉴셋/탈거
+            </button>
+            <button className="text-gray-600 hover:text-gray-900">
+              암장 정보
+            </button>
+            <button className="p-2 text-gray-600 hover:text-gray-900">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          </nav>
+        </div>
       </header>
 
-      {/* Filter and Refresh Buttons */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-2">
-          {updateTypes.map((type) => (
-            <button
-              key={type.value || "all"}
-              onClick={() => setSelectedType(type.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
-                ${
-                  selectedType === type.value
-                    ? type.color
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 shrink-0"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          새로고침
-        </button>
+      {/* 통계 카드 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.totalUpdates}
+            </div>
+            <div className="text-sm text-gray-600">전체 업데이트</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {stats.newsetCount}
+            </div>
+            <div className="text-sm text-gray-600">뉴셋</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">
+              {stats.removalCount}
+            </div>
+            <div className="text-sm text-gray-600">탈거</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.announcementCount}
+            </div>
+            <div className="text-sm text-gray-600">공지</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Updates List */}
+      {/* 필터 및 검색 */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          {/* 타입 필터 */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
+              업데이트 타입
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {updateTypes.map((type) => (
+                <Button
+                  key={type.value || "all"}
+                  variant={selectedType === type.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedType(type.value)}
+                  className={
+                    selectedType === type.value ? "bg-blue-600 text-white" : ""
+                  }
+                >
+                  {type.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* 검색 및 정렬 */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="암장명, 지점명, 제목으로 검색..."
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">정렬:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Toggle
+                checked={showOnlyRecent}
+                onCheckedChange={setShowOnlyRecent}
+                label="최근 1주일만 보기"
+              />
+            </div>
+          </div>
+
+          {/* 새로고침 버튼 */}
+          <div className="flex justify-end">
+            <Button
+              onClick={handleRefresh}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              새로고침
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 즐겨찾기된 업데이트 */}
+      {favorites.length > 0 && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Heart className="w-5 h-5 text-red-500 fill-current" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                즐겨찾기한 업데이트
+              </h3>
+              <span className="text-sm text-gray-500">
+                ({favorites.length})
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {updates
+                .filter((update: RouteUpdate) => favorites.includes(update.id))
+                .map((update: RouteUpdate) => (
+                  <div
+                    key={update.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          update.type === "NEWSET"
+                            ? "bg-green-100 text-green-800"
+                            : update.type === "REMOVAL"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {update.type === "NEWSET"
+                          ? "뉴셋"
+                          : update.type === "REMOVAL"
+                          ? "탈거"
+                          : "공지"}
+                      </span>
+                      <div>
+                        <p className="font-medium">
+                          {update.gym?.name} {update.gym?.branchName}
+                        </p>
+                        <p className="text-sm text-gray-600">{update.title}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => toggleFavorite(update.id)}
+                      className="p-1 text-red-500 hover:text-red-600"
+                    >
+                      <Heart className="w-4 h-4 fill-current" />
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 업데이트 목록 */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
       ) : filteredUpdates.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <p className="text-gray-500">
-            {selectedType
-              ? "선택한 카테고리의 업데이트가 없습니다."
-              : "아직 등록된 업데이트가 없습니다."}
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-gray-500">
+              {searchTerm
+                ? "검색 결과가 없습니다."
+                : "아직 등록된 업데이트가 없습니다."}
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
+          <div className="text-sm text-gray-600 mb-4">
+            총 {filteredUpdates.length}개의 업데이트를 찾았습니다.
+          </div>
+
           {filteredUpdates.map((update: RouteUpdate) => {
-            const typeInfo = getUpdateTypeLabel(update.type);
-            const dateInfo = getDateDisplayInfo(update.type, update.updateDate);
+            const typeInfo = getDateDisplayInfo(update.type, update.updateDate);
             const urgencyClass =
-              dateInfo.urgency === "high"
+              typeInfo.urgency === "high"
                 ? "border-l-4 border-red-500 bg-red-50"
                 : "border-l-4 border-gray-200";
 
             return (
-              <article
+              <Card
                 key={update.id}
-                className={`bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow ${urgencyClass}`}
+                className={`hover:shadow-md transition-shadow ${urgencyClass}`}
               >
-                {/* 1. 타입 & 2. 업데이트 날짜 (최상단, 가장 중요) */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-4 py-2 rounded-full text-sm font-bold ${typeInfo.color}`}
-                    >
-                      {typeInfo.label}
-                    </span>
-                    <time className="text-lg font-semibold text-gray-900">
-                      {dateInfo.date}
-                    </time>
-                  </div>
-                  {/* 6. 인스타 링크 (우측 상단) */}
-                  {update.instagramPostUrl && (
-                    <a
-                      href={update.instagramPostUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:text-green-700 font-medium text-sm"
-                    >
-                      Instagram에서 보기
-                    </a>
-                  )}
-                </div>
+                <CardContent className="p-6">
+                  {/* 상단: 타입, 날짜, 즐겨찾기 */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-4 py-2 rounded-full text-sm font-bold ${typeInfo.color}`}
+                      >
+                        {typeInfo.label}
+                      </span>
+                      <time className="text-lg font-semibold text-gray-900">
+                        {typeInfo.date}
+                      </time>
+                    </div>
 
-                {/* 3. 브랜드 & 4. 지점 (두 번째 줄) */}
-                <div className="mb-3">
-                  <div className="flex items-center gap-2 text-gray-800">
-                    <span className="font-semibold text-lg">
-                      {update.gym?.brand?.name || "브랜드 미상"}
-                    </span>
-                    <span className="text-gray-400">•</span>
-                    <span className="font-medium text-base flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      {update.gym?.branchName ||
-                        update.gym?.name ||
-                        "지점 미상"}
-                    </span>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleFavorite(update.id)}
+                        className={`p-2 rounded-full transition-colors ${
+                          favorites.includes(update.id)
+                            ? "text-red-500 bg-red-50"
+                            : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        }`}
+                      >
+                        <Heart
+                          className={`w-5 h-5 ${
+                            favorites.includes(update.id) ? "fill-current" : ""
+                          }`}
+                        />
+                      </button>
 
-                {/* 5. 벽(섹터) - title 필드 활용 */}
-                {update.title && (
+                      <button className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors">
+                        <Bell className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 암장 정보 */}
                   <div className="mb-3">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                      🧗‍♀️ {update.title}
+                    <div className="flex items-center gap-2 text-gray-800">
+                      <span className="font-semibold text-lg">
+                        {update.gym?.brand?.name || "브랜드 미상"}
+                      </span>
+                      <span className="text-gray-400">•</span>
+                      <span className="font-medium text-base flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {update.gym?.branchName ||
+                          update.gym?.name ||
+                          "지점 미상"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 제목 및 설명 */}
+                  {update.title && (
+                    <div className="mb-3">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                        🧗‍♀️ {update.title}
+                      </span>
+                    </div>
+                  )}
+
+                  {typeInfo.subtitle && (
+                    <div
+                      className={`text-sm mb-3 ${
+                        typeInfo.urgency === "high"
+                          ? "text-red-700 font-medium"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {typeInfo.subtitle}
+                    </div>
+                  )}
+
+                  {update.description && (
+                    <p className="text-gray-700 mb-3 whitespace-pre-wrap">
+                      {update.description}
+                    </p>
+                  )}
+
+                  {/* 하단 정보 */}
+                  <div className="flex items-center justify-between text-xs text-gray-400 mt-4">
+                    <span>
+                      작성:{" "}
+                      {safeFormatDate(update.createdAt, "yyyy/MM/dd HH:mm") ||
+                        "--:--"}
                     </span>
+                    {update.instagramPostUrl && (
+                      <a
+                        href={update.instagramPostUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 hover:text-green-700 font-medium"
+                      >
+                        Instagram에서 보기
+                      </a>
+                    )}
                   </div>
-                )}
-
-                {/* 부가 정보 */}
-                {dateInfo.subtitle && (
-                  <div
-                    className={`text-sm mb-3 ${
-                      dateInfo.urgency === "high"
-                        ? "text-red-700 font-medium"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {dateInfo.subtitle}
-                  </div>
-                )}
-
-                {update.description && (
-                  <p className="text-gray-700 mb-3 whitespace-pre-wrap">
-                    {update.description}
-                  </p>
-                )}
-
-                {/* 작성일자 (하단) */}
-                <div className="text-xs text-gray-400 mt-4">
-                  작성:{" "}
-                  {safeFormatDate(update.createdAt, "yyyy/MM/dd") || "--:--"}
-                </div>
-              </article>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="mt-12 pt-8 border-t border-gray-200 text-center text-gray-500">
+        <p>&copy; 2025 Climb Hub. 모든 권리 보유.</p>
+      </footer>
     </main>
   );
 }

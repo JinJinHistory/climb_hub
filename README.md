@@ -1,231 +1,194 @@
 # Climb Hub
 
-클라이밍 암장의 뉴셋/탈거 정보를 공유하는 웹 애플리케이션입니다.
+전국 클라이밍 암장의 뉴셋/탈거 정보를 공유하는 웹 애플리케이션입니다.
 
-## 기술 스택
+## 🚀 주요 기능
 
-- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
-- **Backend**: GraphQL (Apollo Server), PostgreSQL
-- **State Management**: Apollo Client, Zustand
-- **UI Components**: Lucide React Icons
-- **Database**: PostgreSQL with pg library
-- **Migration**: Custom migration system
+### 📅 뉴셋/탈거 정보 관리
+- 전국 클라이밍 암장의 뉴셋 일정 확인
+- 탈거 예정일 알림 및 관리
+- 공지사항 및 업데이트 정보 제공
+- 실시간 정보 동기화
 
-## 주요 기능
+### 🔍 고급 필터링 및 검색
+- **타입별 필터**: 전체, 뉴셋, 탈거, 공지
+- **검색 기능**: 암장명, 지점명, 제목, 설명으로 검색
+- **정렬 옵션**: 날짜순, 암장순, 타입순
+- **최근 업데이트**: 최근 1주일 업데이트만 보기
 
-- **브랜드 관리**: 클라이밍 브랜드 정보 관리
-- **암장 관리**: 각 브랜드의 암장 정보 관리
-- **업데이트 관리**: 뉴셋, 탈거, 부분탈거, 공지사항 관리
-- **크롤링 로그**: Instagram 크롤링 결과 로그
-- **관리자 대시보드**: 브랜드, 암장, 업데이트 관리 인터페이스
+### ⭐ 즐겨찾기 및 알림
+- 관심 있는 업데이트를 즐겨찾기로 저장
+- 즐겨찾기한 업데이트 목록 별도 표시
+- 업데이트별 알림 설정 기능
 
-## 프로젝트 구조
+### 📊 업데이트 현황 통계
+- 전체 업데이트 수
+- 뉴셋, 탈거, 공지별 개수
+- 실시간 통계 업데이트
+
+### 🎨 사용자 친화적 UI
+- 반응형 디자인으로 모바일/데스크톱 지원
+- 직관적인 필터 및 검색 인터페이스
+- 확장 가능한 업데이트 카드
+- 현대적이고 깔끔한 디자인
+
+## 🛠️ 기술 스택
+
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **State Management**: React Hooks (useState, useMemo)
+- **GraphQL**: Apollo Client
+- **Build Tool**: Next.js App Router
+
+## 📁 프로젝트 구조
 
 ```
-climb_hub/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── admin/             # 관리자 페이지
-│   │   ├── graphql/           # GraphQL Playground
-│   │   └── layout.tsx         # 루트 레이아웃
-│   ├── components/            # React 컴포넌트
-│   ├── graphql/               # GraphQL 관련 파일
-│   │   ├── schema.ts          # GraphQL 스키마 정의
-│   │   ├── resolvers.ts       # GraphQL 리졸버
-│   │   ├── queries.ts         # GraphQL 쿼리
-│   │   └── mutations.ts       # GraphQL 뮤테이션
-│   ├── lib/                   # 유틸리티 라이브러리
-│   │   ├── database.ts        # PostgreSQL 연결
-│   │   └── apollo-client.ts   # Apollo Client 설정
-│   ├── pages/                 # API 라우트
-│   │   └── api/
-│   │       └── graphql.ts     # GraphQL API 엔드포인트
-│   └── types/                 # TypeScript 타입 정의
-├── migrations/                # 데이터베이스 마이그레이션
-│   ├── 001_initial_schema.sql
-│   ├── 002_add_sample_data.sql
-│   └── 003_add_phone_column_to_gyms.sql
-├── database_schema.sql        # 전체 스키마 (단일 파일)
-└── package.json
+src/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # 메인 페이지 (뉴셋/탈거 목록)
+│   ├── admin/             # 관리자 페이지
+│   └── layout.tsx         # 레이아웃
+├── components/            # React 컴포넌트
+│   ├── ui/               # 기본 UI 컴포넌트
+│   │   ├── button.tsx    # 버튼 컴포넌트
+│   │   ├── card.tsx      # 카드 컴포넌트
+│   │   └── toggle.tsx    # 토글 스위치
+│   └── features/         # 기능별 컴포넌트
+├── graphql/              # GraphQL 관련 파일
+│   ├── queries.ts        # GraphQL 쿼리
+│   ├── mutations.ts      # GraphQL 뮤테이션
+│   ├── resolvers.ts      # GraphQL 리졸버
+│   └── schema.ts         # GraphQL 스키마
+├── lib/                  # 유틸리티 함수
+│   ├── apollo-client.ts  # Apollo Client 설정
+│   ├── database.ts       # 데이터베이스 연결
+│   └── utils.ts          # 공통 유틸리티
+└── types/                # TypeScript 타입 정의
+    └── index.ts          # 타입 정의
 ```
 
-## 개발 환경 설정
+## 🚀 시작하기
 
-### 1. 의존성 설치
+### 필수 요구사항
+- Node.js 18+
+- npm 또는 yarn
+- PostgreSQL 데이터베이스
+
+### 설치 및 실행
+
+1. 저장소 클론
+```bash
+git clone <repository-url>
+cd climb_hub
+```
+
+2. 의존성 설치
 ```bash
 npm install
 ```
 
-### 2. PostgreSQL 설정
-
-#### 로컬 PostgreSQL 설치 (Windows)
-1. [PostgreSQL 공식 사이트](https://www.postgresql.org/download/windows/)에서 다운로드
-2. 설치 시 비밀번호 설정 (예: `postgres123`)
-3. 서비스 자동 시작 설정
-
-#### 데이터베이스 생성
-```bash
-# PostgreSQL 접속
-psql -U postgres -h localhost
-
-# 데이터베이스 생성
-CREATE DATABASE climb_hub;
-
-# 데이터베이스 연결
-\c climb_hub
-```
-
-### 3. 환경 변수 설정
+3. 환경 변수 설정
 `.env.local` 파일 생성:
 ```env
-DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/climb_hub
+DATABASE_URL=postgresql://username:password@localhost:5432/climb_hub
 ```
 
-### 4. 데이터베이스 스키마 설정
-
-#### 방법 1: 마이그레이션 시스템 사용 (권장)
+4. 데이터베이스 설정
 ```bash
-# 마이그레이션 실행
 npm run db:migrate
-
-# 데이터베이스 초기화
-npm run db:reset
-
-# 샘플 데이터 삽입
 npm run db:seed
 ```
 
-#### 방법 2: 단일 스키마 파일 사용
-```bash
-# PostgreSQL에서 스키마 실행
-psql -U postgres -d climb_hub -f database_schema.sql
-```
-
-### 5. 개발 서버 실행
+5. 개발 서버 실행
 ```bash
 npm run dev
 ```
 
-### 6. GraphQL 코드 생성 (선택사항)
-```bash
-npm run codegen
-```
+6. 브라우저에서 `http://localhost:3000` 접속
 
-## GraphQL API
+## 📱 주요 화면 구성
 
-### 스키마 구조
-- `Brand`: 브랜드 정보 (id, name, logoUrl, websiteUrl)
-- `Gym`: 암장 정보 (brandId, name, branchName, instagramHandle, address, phone)
-- `RouteUpdate`: 암장 업데이트 정보 (gymId, type, updateDate, title, description)
-- `CrawlLog`: 크롤링 로그 (gymId, status, postsFound, postsNew)
+### 1. 헤더
+- Climb Hub 로고 및 네비게이션 메뉴
+- 뉴셋/탈거, 암장 정보 탭
 
-### 주요 쿼리
-- `brands`: 모든 브랜드 조회
-- `gyms(activeOnly)`: 활성 암장 조회
-- `routeUpdates(gymId, type, limit, offset)`: 업데이트 목록 조회
-- `crawlLogs(gymId)`: 크롤링 로그 조회
+### 2. 통계 카드
+- 전체 업데이트 수, 뉴셋, 탈거, 공지 개수
+- 시각적 아이콘과 함께 표시
 
-### 주요 뮤테이션
-- `createBrand`, `updateBrand`, `deleteBrand`
-- `createGym`, `updateGym`, `deleteGym`
-- `createRouteUpdate`, `updateRouteUpdate`, `deleteRouteUpdate`
-- `createCrawlLog`, `updateCrawlLog`
+### 3. 필터 및 검색
+- 업데이트 타입별 필터 버튼
+- 실시간 검색 기능
+- 정렬 옵션 및 최근 업데이트 토글
 
-### API 엔드포인트
-- **GraphQL API**: `/api/graphql`
-- **GraphQL Playground**: `/graphql` (Apollo Studio로 리다이렉트)
+### 4. 즐겨찾기 목록
+- 사용자가 즐겨찾기한 업데이트들
+- 빠른 접근 및 관리
 
-## 데이터베이스 마이그레이션
+### 5. 업데이트 목록
+- 필터링된 업데이트 목록
+- 확장 가능한 카드 형태
+- 즐겨찾기 및 알림 기능
 
-### 마이그레이션 시스템
-프로젝트는 커스텀 마이그레이션 시스템을 사용합니다:
+## 🔧 주요 기능 상세
 
-```
-migrations/
-├── 001_initial_schema.sql     # 초기 테이블 생성
-├── 002_add_sample_data.sql    # 샘플 데이터 삽입
-└── 003_add_phone_column_to_gyms.sql  # 스키마 변경
-```
+### 뉴셋 정보
+- 새로운 루트 설치 일정
+- 암장별 뉴셋 정보
+- 상세 설명 및 이미지
 
-### 마이그레이션 명령어
-```bash
-npm run db:migrate    # 마이그레이션 실행
-npm run db:reset      # 데이터베이스 초기화
-npm run db:seed       # 샘플 데이터 삽입
-```
+### 탈거 정보
+- 루트 탈거 예정일
+- 마지막 기회 알림
+- 긴급도 표시
 
-### 마이그레이션 작성 가이드
-1. 파일명: `{순번}_{설명}.sql`
-2. 헤더에 마이그레이션 정보 포함
-3. 롤백 가능한 구조로 작성
-4. `IF NOT EXISTS` 사용으로 안전성 확보
+### 공지사항
+- 암장별 중요 공지
+- 업데이트 및 변경사항
+- 일정 및 이벤트 정보
 
-## 관리자 기능
+## 📊 데이터 구조
 
-### 관리자 페이지 접근
-- `/admin`: 관리자 대시보드
-- `/admin/gyms`: 암장 관리
-- `/admin/updates`: 업데이트 관리
-- `/admin/updates/list`: 업데이트 목록
-- `/admin/updates/edit/[id]`: 업데이트 편집
+### RouteUpdate
+- `id`: 고유 식별자
+- `type`: 업데이트 타입 (NEWSET, REMOVAL, ANNOUNCEMENT)
+- `updateDate`: 업데이트 일자
+- `title`: 제목
+- `description`: 상세 설명
+- `gym`: 관련 암장 정보
+- `instagramPostUrl`: Instagram 포스트 링크
 
-### 주요 기능
-- 브랜드 CRUD 작업
-- 암장 정보 관리
-- 뉴셋/탈거 업데이트 등록
-- 크롤링 로그 확인
+### Gym
+- `name`: 암장명
+- `branchName`: 지점명
+- `brand`: 브랜드 정보
+- `address`: 주소
+- `instagramHandle`: Instagram 계정
 
-## 배포
+## 🔧 커스터마이징
 
-### 프로덕션 환경 변수
-```env
-DATABASE_URL=postgresql://username:password@host:port/database
-NODE_ENV=production
-```
+### 업데이트 타입 추가
+새로운 업데이트 타입을 추가하려면 `getDateDisplayInfo` 함수와 관련 로직을 수정하면 됩니다.
 
-### 빌드 및 실행
-```bash
-npm run build
-npm start
-```
+### 필터 옵션 확장
+필터링 옵션을 추가하려면 `filteredUpdates` 로직을 수정하면 됩니다.
 
-## 개발 가이드
+### 스타일 수정
+Tailwind CSS 클래스를 사용하여 각 컴포넌트의 스타일을 쉽게 수정할 수 있습니다.
 
-### 새로운 기능 추가
-1. GraphQL 스키마에 타입 추가 (`src/graphql/schema.ts`)
-2. 리졸버 구현 (`src/graphql/resolvers.ts`)
-3. 쿼리/뮤테이션 정의 (`src/graphql/queries.ts`, `src/graphql/mutations.ts`)
-4. 필요한 경우 마이그레이션 생성
-5. 프론트엔드 컴포넌트 구현
-
-### 데이터베이스 스키마 변경
-1. 새로운 마이그레이션 파일 생성
-2. 스키마 변경 SQL 작성
-3. 마이그레이션 실행
-4. GraphQL 스키마 업데이트
-5. 리졸버 수정
-
-## 문제 해결
-
-### 일반적인 문제
-1. **데이터베이스 연결 오류**: `DATABASE_URL` 확인
-2. **테이블이 존재하지 않음**: 마이그레이션 실행
-3. **GraphQL 오류**: 스키마와 리졸버 일치성 확인
-4. **타입 오류**: `npm run codegen` 실행
-
-### 로그 확인
-- GraphQL 오류: 브라우저 개발자 도구 콘솔
-- 데이터베이스 오류: 서버 로그
-- 마이그레이션 오류: 터미널 출력
-
-## 기여 가이드
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 라이선스
+## 📄 라이선스
 
 이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+## 🤝 기여하기
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 문의
+
+프로젝트에 대한 문의사항이 있으시면 이슈를 생성해 주세요.
