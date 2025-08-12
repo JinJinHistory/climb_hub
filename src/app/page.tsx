@@ -147,7 +147,7 @@ export default function HomePage() {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       filtered = filtered.filter(
-        (update: RouteUpdate) => new Date(update.createdAt) >= weekAgo
+        (update: RouteUpdate) => new Date(update.updateDate) >= weekAgo
       );
     }
 
@@ -156,7 +156,7 @@ export default function HomePage() {
       switch (sortBy) {
         case "date":
           return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(b.updateDate).getTime() - new Date(a.updateDate).getTime()
           );
         case "gym":
           return (a.gym?.name || "").localeCompare(b.gym?.name || "");
@@ -523,8 +523,8 @@ export default function HomePage() {
                   {/* 하단 정보 */}
                   <div className="flex items-center justify-between text-xs text-gray-400 mt-4">
                     <span>
-                      작성:{" "}
-                      {safeFormatDate(update.createdAt, "yyyy/MM/dd HH:mm") ||
+                      업데이트:{" "}
+                      {safeFormatDate(update.updateDate, "yyyy/MM/dd HH:mm") ||
                         "--:--"}
                     </span>
                     {update.instagramPostUrl && (
