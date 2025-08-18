@@ -1,4 +1,4 @@
-import pool from "@/lib/database";
+import { prisma } from "@/lib/database";
 
 // 날짜를 ISO 문자열로 변환하는 헬퍼 함수
 const formatDate = (date: any): string => {
@@ -28,96 +28,103 @@ const formatDateOnly = (date: any): string => {
 export const resolvers = {
   Query: {
     brands: async () => {
-      const result = await pool.query("SELECT * FROM brands ORDER BY name");
-      return result.rows.map((row) => ({
-        ...row,
-        logoUrl: row.logo_url,
-        websiteUrl: row.website_url,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
-      }));
+      try {
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        const brands = await prisma.brand.findMany({
+          orderBy: { name: 'asc' }
+        });
+        
+        return brands.map((brand) => ({
+          ...brand,
+          logoUrl: brand.logoUrl,
+          websiteUrl: brand.websiteUrl,
+          createdAt: formatDate(brand.createdAt),
+          updatedAt: formatDate(brand.updatedAt),
+        }));
+      } catch (error: any) {
+        console.error('brands query error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
+        throw new Error("브랜드 목록을 가져오는 중 오류가 발생했습니다.");
+      } finally {
+        await prisma.$disconnect();
+      }
     },
 
     brand: async (_: any, { id }: { id: string }) => {
-      const result = await pool.query("SELECT * FROM brands WHERE id = $1", [
-        id,
-      ]);
-      const row = result.rows[0];
-      if (!row) return null;
+      const brand = await prisma.brand.findUnique({
+        where: { id }
+      });
+      
+      if (!brand) return null;
 
       return {
-        ...row,
-        logoUrl: row.logo_url,
-        websiteUrl: row.website_url,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+        ...brand,
+        logoUrl: brand.logoUrl,
+        websiteUrl: brand.websiteUrl,
+        createdAt: formatDate(brand.createdAt),
+        updatedAt: formatDate(brand.updatedAt),
       };
     },
 
     gyms: async (_: any, { activeOnly = true }: { activeOnly?: boolean }) => {
-      let query = `
-        SELECT g.*, b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url, b.website_url as brand_website_url, b.created_at as brand_created_at, b.updated_at as brand_updated_at
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-      `;
+      const gyms = await prisma.gym.findMany({
+        where: activeOnly ? { isActive: true } : {},
+        include: {
+          brand: true
+        },
+        orderBy: { name: 'asc' }
+      });
 
-      if (activeOnly) {
-        query += " WHERE g.is_active = true";
-      }
-
-      query += " ORDER BY g.name";
-
-      const result = await pool.query(query);
-      return result.rows.map((row) => ({
-        ...row,
-        brandId: row.brand_id,
-        branchName: row.branch_name,
-        instagramUrl: row.instagram_url,
-        instagramHandle: row.instagram_handle,
-        isActive: row.is_active,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+      return gyms.map((gym) => ({
+        ...gym,
+        brandId: gym.brandId,
+        branchName: gym.branchName,
+        instagramUrl: gym.instagramUrl,
+        instagramHandle: gym.instagramHandle,
+        isActive: gym.isActive,
+        createdAt: formatDate(gym.createdAt),
+        updatedAt: formatDate(gym.updatedAt),
         brand: {
-          id: row.brand_id,
-          name: row.brand_name,
-          logoUrl: row.brand_logo_url,
-          websiteUrl: row.brand_website_url,
-          createdAt: formatDate(row.brand_created_at),
-          updatedAt: formatDate(row.brand_updated_at),
+          ...gym.brand,
+          logoUrl: gym.brand.logoUrl,
+          websiteUrl: gym.brand.websiteUrl,
+          createdAt: formatDate(gym.brand.createdAt),
+          updatedAt: formatDate(gym.brand.updatedAt),
         },
       }));
     },
 
     gym: async (_: any, { id }: { id: string }) => {
-      const result = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url, b.website_url as brand_website_url, b.created_at as brand_created_at, b.updated_at as brand_updated_at
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.id = $1
-      `,
-        [id]
-      );
+      const gym = await prisma.gym.findUnique({
+        where: { id },
+        include: {
+          brand: true
+        }
+      });
 
-      const row = result.rows[0];
-      if (!row) return null;
+      if (!gym) return null;
 
       return {
-        ...row,
-        brandId: row.brand_id,
-        branchName: row.branch_name,
-        instagramUrl: row.instagram_url,
-        instagramHandle: row.instagram_handle,
-        isActive: row.is_active,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+        ...gym,
+        brandId: gym.brandId,
+        branchName: gym.branchName,
+        instagramUrl: gym.instagramUrl,
+        instagramHandle: gym.instagramHandle,
+        isActive: gym.isActive,
+        createdAt: formatDate(gym.createdAt),
+        updatedAt: formatDate(gym.updatedAt),
         brand: {
-          id: row.brand_id,
-          name: row.brand_name,
-          logoUrl: row.brand_logo_url,
-          websiteUrl: row.brand_website_url,
-          createdAt: formatDate(row.brand_created_at),
-          updatedAt: formatDate(row.brand_updated_at),
+          ...gym.brand,
+          logoUrl: gym.brand.logoUrl,
+          websiteUrl: gym.brand.websiteUrl,
+          createdAt: formatDate(gym.brand.createdAt),
+          updatedAt: formatDate(gym.brand.updatedAt),
         },
       };
     },
@@ -136,170 +143,158 @@ export const resolvers = {
         offset?: number;
       }
     ) => {
-      let query = `
-        SELECT ru.*, g.id as gym_id, g.name as gym_name, g.branch_name as gym_branch_name, g.instagram_handle as gym_instagram_handle,
-               b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url
-        FROM route_updates ru
-        LEFT JOIN gyms g ON ru.gym_id = g.id
-        LEFT JOIN brands b ON g.brand_id = b.id
-      `;
-
-      const params: any[] = [];
-      let paramIndex = 1;
-
+      const where: any = {};
+      
       if (gymId) {
-        query += ` WHERE ru.gym_id = $${paramIndex}`;
-        params.push(gymId);
-        paramIndex++;
+        where.gymId = gymId;
       }
-
+      
       if (type) {
-        const whereClause = gymId ? "AND" : "WHERE";
-        query += ` ${whereClause} ru.type = $${paramIndex}`;
-        params.push(type);
-        paramIndex++;
+        where.type = type as any;
       }
 
-      query +=
-        " ORDER BY ru.update_date DESC LIMIT $" +
-        paramIndex +
-        " OFFSET $" +
-        (paramIndex + 1);
-      params.push(limit, offset);
+      const routeUpdates = await prisma.routeUpdate.findMany({
+        where,
+        include: {
+          gym: {
+            include: {
+              brand: true
+            }
+          }
+        },
+        orderBy: { updateDate: 'desc' },
+        take: limit,
+        skip: offset
+      });
 
-      const result = await pool.query(query, params);
-      return result.rows.map((row) => ({
-        id: row.id,
-        gymId: row.gym_id,
-        type: row.type,
-        updateDate: formatDateOnly(row.update_date),
-        title: row.title,
-        description: row.description,
-        instagramPostUrl: row.instagram_post_url,
-        instagramPostId: row.instagram_post_id,
-        imageUrls: row.image_urls,
-        rawCaption: row.raw_caption,
-        parsedData: row.parsed_data,
-        isVerified: row.is_verified,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+      return routeUpdates.map((update) => ({
+        id: update.id,
+        gymId: update.gymId,
+        type: update.type,
+        updateDate: formatDateOnly(update.updateDate),
+        title: update.title,
+        description: update.description,
+        instagramPostUrl: update.instagramPostUrl,
+        instagramPostId: update.instagramPostId,
+        imageUrls: update.imageUrls,
+        rawCaption: update.rawCaption,
+        parsedData: update.parsedData,
+        isVerified: update.isVerified,
+        createdAt: formatDate(update.createdAt),
+        updatedAt: formatDate(update.updatedAt),
         gym: {
-          id: row.gym_id,
-          name: row.gym_name,
-          branchName: row.gym_branch_name,
-          instagramHandle: row.gym_instagram_handle,
+          id: update.gym.id,
+          name: update.gym.name,
+          branchName: update.gym.branchName,
+          instagramHandle: update.gym.instagramHandle,
           brand: {
-            id: row.brand_id,
-            name: row.brand_name,
-            logoUrl: row.brand_logo_url,
+            id: update.gym.brand.id,
+            name: update.gym.brand.name,
+            logoUrl: update.gym.brand.logoUrl,
           },
         },
       }));
     },
 
     routeUpdate: async (_: any, { id }: { id: string }) => {
-      const result = await pool.query(
-        `
-        SELECT ru.*, g.id as gym_id, g.name as gym_name, g.branch_name as gym_branch_name, g.instagram_handle as gym_instagram_handle,
-               b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url
-        FROM route_updates ru
-        LEFT JOIN gyms g ON ru.gym_id = g.id
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE ru.id = $1
-      `,
-        [id]
-      );
+      const routeUpdate = await prisma.routeUpdate.findUnique({
+        where: { id },
+        include: {
+          gym: {
+            include: {
+              brand: true
+            }
+          }
+        }
+      });
 
-      const row = result.rows[0];
-      if (!row) return null;
+      if (!routeUpdate) return null;
 
       return {
-        id: row.id,
-        gymId: row.gym_id,
-        type: row.type,
-        updateDate: formatDateOnly(row.update_date),
-        title: row.title,
-        description: row.description,
-        instagramPostUrl: row.instagram_post_url,
-        instagramPostId: row.instagram_post_id,
-        imageUrls: row.image_urls,
-        rawCaption: row.raw_caption,
-        parsedData: row.parsed_data,
-        isVerified: row.is_verified,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+        id: routeUpdate.id,
+        gymId: routeUpdate.gymId,
+        type: routeUpdate.type,
+        updateDate: formatDateOnly(routeUpdate.updateDate),
+        title: routeUpdate.title,
+        description: routeUpdate.description,
+        instagramPostUrl: routeUpdate.instagramPostUrl,
+        instagramPostId: routeUpdate.instagramPostId,
+        imageUrls: routeUpdate.imageUrls,
+        rawCaption: routeUpdate.rawCaption,
+        parsedData: routeUpdate.parsedData,
+        isVerified: routeUpdate.isVerified,
+        createdAt: formatDate(routeUpdate.createdAt),
+        updatedAt: formatDate(routeUpdate.updatedAt),
         gym: {
-          id: row.gym_id,
-          name: row.gym_name,
-          branchName: row.gym_branch_name,
-          instagramHandle: row.gym_instagram_handle,
+          id: routeUpdate.gym.id,
+          name: routeUpdate.gym.name,
+          branchName: routeUpdate.gym.branchName,
+          instagramHandle: routeUpdate.gym.instagramHandle,
           brand: {
-            id: row.brand_id,
-            name: row.brand_name,
-            logoUrl: row.brand_logo_url,
+            id: routeUpdate.gym.brand.id,
+            name: routeUpdate.gym.brand.name,
+            logoUrl: routeUpdate.gym.brand.logoUrl,
           },
         },
       };
     },
 
     crawlLogs: async (_: any, { gymId }: { gymId?: string }) => {
-      let query = `
-        SELECT cl.*, g.id as gym_id, g.name as gym_name, g.branch_name as gym_branch_name,
-               b.id as brand_id, b.name as brand_name
-        FROM crawl_logs cl
-        LEFT JOIN gyms g ON cl.gym_id = g.id
-        LEFT JOIN brands b ON g.brand_id = b.id
-      `;
-
-      const params: any[] = [];
-
+      const where: any = {};
+      
       if (gymId) {
-        query += " WHERE cl.gym_id = $1";
-        params.push(gymId);
+        where.gymId = gymId;
       }
 
-      query += " ORDER BY cl.created_at DESC";
+      const crawlLogs = await prisma.crawlLog.findMany({
+        where,
+        include: {
+          gym: {
+            include: {
+              brand: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-      const result = await pool.query(query, params);
-      return result.rows.map((row) => ({
-        ...row,
+      return crawlLogs.map((log) => ({
+        ...log,
         gym: {
-          id: row.gym_id,
-          name: row.gym_name,
-          branchName: row.gym_branch_name,
+          id: log.gym.id,
+          name: log.gym.name,
+          branchName: log.gym.branchName,
           brand: {
-            id: row.brand_id,
-            name: row.brand_name,
+            id: log.gym.brand.id,
+            name: log.gym.brand.name,
           },
         },
       }));
     },
 
     crawlLog: async (_: any, { id }: { id: string }) => {
-      const result = await pool.query(
-        `
-        SELECT cl.*, g.id as gym_id, g.name as gym_name, g.branch_name as gym_branch_name,
-               b.id as brand_id, b.name as brand_name
-        FROM crawl_logs cl
-        LEFT JOIN gyms g ON cl.gym_id = g.id
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE cl.id = $1
-      `,
-        [id]
-      );
+      const crawlLog = await prisma.crawlLog.findUnique({
+        where: { id },
+        include: {
+          gym: {
+            include: {
+              brand: true
+            }
+          }
+        }
+      });
 
-      const row = result.rows[0];
-      if (!row) return null;
+      if (!crawlLog) return null;
 
       return {
-        ...row,
+        ...crawlLog,
         gym: {
-          id: row.gym_id,
-          name: row.gym_name,
-          branchName: row.gym_branch_name,
+          id: crawlLog.gym.id,
+          name: crawlLog.gym.name,
+          branchName: crawlLog.gym.branchName,
           brand: {
-            id: row.brand_id,
-            name: row.brand_name,
+            id: crawlLog.gym.brand.id,
+            name: crawlLog.gym.brand.name,
           },
         },
       };
@@ -309,146 +304,176 @@ export const resolvers = {
   Mutation: {
     createBrand: async (_: any, { input }: { input: any }) => {
       try {
-        const result = await pool.query(
-          "INSERT INTO brands (name, logo_url, website_url) VALUES ($1, $2, $3) RETURNING *",
-          [input.name, input.logoUrl, input.websiteUrl]
-        );
-        const row = result.rows[0];
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        const brand = await prisma.brand.create({
+          data: {
+            name: input.name,
+            logoUrl: input.logoUrl,
+            websiteUrl: input.websiteUrl,
+          },
+        });
         return {
-          ...row,
-          logoUrl: row.logo_url,
-          websiteUrl: row.website_url,
-          createdAt: formatDate(row.created_at),
-          updatedAt: formatDate(row.updated_at),
+          ...brand,
+          logoUrl: brand.logoUrl,
+          websiteUrl: brand.websiteUrl,
+          createdAt: formatDate(brand.createdAt),
+          updatedAt: formatDate(brand.updatedAt),
         };
       } catch (error: any) {
+        console.error('createBrand error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
         if (
-          error.code === "23505" &&
-          error.constraint === "unique_brand_name"
+          error.code === "P2002" &&
+          error.meta?.target === "Brand_name_key"
         ) {
           throw new Error(
             `브랜드명 "${input.name}"이 이미 존재합니다. 다른 이름을 사용해주세요.`
           );
         }
-        throw error;
+        
+        if (error.code === "P2003") {
+          throw new Error("데이터 무결성 오류가 발생했습니다.");
+        }
+        
+        throw new Error("브랜드 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        await prisma.$disconnect();
       }
     },
 
     updateBrand: async (_: any, { id, input }: { id: string; input: any }) => {
-      const fields = [];
-      const values = [];
-      let paramIndex = 1;
-
-      if (input.name !== undefined) {
-        fields.push(`name = $${paramIndex}`);
-        values.push(input.name);
-        paramIndex++;
-      }
-      if (input.logoUrl !== undefined) {
-        fields.push(`logo_url = $${paramIndex}`);
-        values.push(input.logoUrl);
-        paramIndex++;
-      }
-      if (input.websiteUrl !== undefined) {
-        fields.push(`website_url = $${paramIndex}`);
-        values.push(input.websiteUrl);
-        paramIndex++;
-      }
-
-      values.push(id);
       try {
-        const result = await pool.query(
-          `UPDATE brands SET ${fields.join(
-            ", "
-          )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
-          values
-        );
-        const row = result.rows[0];
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        const brand = await prisma.brand.update({
+          where: { id },
+          data: {
+            name: input.name,
+            logoUrl: input.logoUrl,
+            websiteUrl: input.websiteUrl,
+          },
+        });
         return {
-          ...row,
-          logoUrl: row.logo_url,
-          websiteUrl: row.website_url,
-          createdAt: formatDate(row.created_at),
-          updatedAt: formatDate(row.updated_at),
+          ...brand,
+          logoUrl: brand.logoUrl,
+          websiteUrl: brand.websiteUrl,
+          createdAt: formatDate(brand.createdAt),
+          updatedAt: formatDate(brand.updatedAt),
         };
       } catch (error: any) {
+        console.error('updateBrand error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
+        if (error.code === "P2025") {
+          throw new Error("해당 브랜드를 찾을 수 없습니다.");
+        }
+        
         if (
-          error.code === "23505" &&
-          error.constraint === "unique_brand_name"
+          error.code === "P2002" &&
+          error.meta?.target === "Brand_name_key"
         ) {
           throw new Error(
             `브랜드명 "${input.name}"이 이미 존재합니다. 다른 이름을 사용해주세요.`
           );
         }
-        throw error;
+        
+        throw new Error("브랜드 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        await prisma.$disconnect();
       }
     },
 
     deleteBrand: async (_: any, { id }: { id: string }) => {
-      await pool.query("DELETE FROM brands WHERE id = $1", [id]);
-      return true;
+      try {
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        await prisma.brand.delete({
+          where: { id }
+        });
+        return true;
+      } catch (error: any) {
+        console.error('deleteBrand error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
+        if (error.code === "P2025") {
+          throw new Error("해당 브랜드를 찾을 수 없습니다.");
+        }
+        
+        if (error.code === "P2003") {
+          throw new Error("이 브랜드와 연결된 암장이 있어서 삭제할 수 없습니다. 먼저 연결된 암장을 삭제해주세요.");
+        }
+        
+        throw new Error("브랜드 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        await prisma.$disconnect();
+      }
     },
 
     createGym: async (_: any, { input }: { input: any }) => {
       try {
-        const result = await pool.query(
-          `
-          INSERT INTO gyms (brand_id, name, branch_name, instagram_url, instagram_handle, address, phone, latitude, longitude, is_active)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          RETURNING *
-        `,
-          [
-            input.brandId,
-            input.name,
-            input.branchName,
-            input.instagramUrl,
-            input.instagramHandle,
-            input.address,
-            input.phone,
-            input.latitude,
-            input.longitude,
-            input.isActive,
-          ]
-        );
+        const gym = await prisma.gym.create({
+          data: {
+            brandId: input.brandId,
+            name: input.name,
+            branchName: input.branchName,
+            instagramUrl: input.instagramUrl,
+            instagramHandle: input.instagramHandle,
+            address: input.address,
+            phone: input.phone,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            isActive: input.isActive,
+          },
+        });
 
-        const gym = result.rows[0];
-        const brandResult = await pool.query(
-          "SELECT * FROM brands WHERE id = $1",
-          [gym.brand_id]
-        );
-        const brand = brandResult.rows[0];
+        const brand = await prisma.brand.findUnique({
+          where: { id: gym.brandId }
+        });
 
         return {
           ...gym,
-          brandId: gym.brand_id,
-          branchName: gym.branch_name,
-          instagramUrl: gym.instagram_url,
-          instagramHandle: gym.instagram_handle,
-          isActive: gym.is_active,
-          createdAt: formatDate(gym.created_at),
-          updatedAt: formatDate(gym.updated_at),
+          brandId: gym.brandId,
+          branchName: gym.branchName,
+          instagramUrl: gym.instagramUrl,
+          instagramHandle: gym.instagramHandle,
+          isActive: gym.isActive,
+          createdAt: formatDate(gym.createdAt),
+          updatedAt: formatDate(gym.updatedAt),
           brand: {
             ...brand,
-            logoUrl: brand.logo_url,
-            websiteUrl: brand.website_url,
-            createdAt: formatDate(brand.created_at),
-            updatedAt: formatDate(brand.updated_at),
+            logoUrl: brand.logoUrl,
+            websiteUrl: brand.websiteUrl,
+            createdAt: formatDate(brand.createdAt),
+            updatedAt: formatDate(brand.updatedAt),
           },
         };
       } catch (error: any) {
-        if (error.code === "23505") {
-          if (error.constraint === "unique_brand_branch") {
+        if (error.code === "P2002") {
+          if (error.meta?.target === "Gym_brandId_branchName_key") {
             // 브랜드명 조회
-            const brandResult = await pool.query(
-              "SELECT name FROM brands WHERE id = $1",
-              [input.brandId]
-            );
-            const brandName = brandResult.rows[0]?.name || "해당 브랜드";
+            const brand = await prisma.brand.findUnique({
+              where: { id: input.brandId }
+            });
+            const brandName = brand?.name || "해당 브랜드";
             throw new Error(
               `${brandName}에 "${input.branchName}" 지점이 이미 존재합니다. 다른 지점명을 사용해주세요.`
             );
           }
-          if (error.constraint === "unique_instagram_handle") {
+          if (error.meta?.target === "Gym_instagramHandle_key") {
             throw new Error(
               `인스타그램 핸들 "${input.instagramHandle}"이 이미 사용 중입니다. 다른 핸들을 사용해주세요.`
             );
@@ -459,347 +484,274 @@ export const resolvers = {
     },
 
     updateGym: async (_: any, { id, input }: { id: string; input: any }) => {
-      const fields = [];
-      const values = [];
-      let paramIndex = 1;
+      const gym = await prisma.gym.update({
+        where: { id },
+        data: {
+          brandId: input.brandId,
+          name: input.name,
+          branchName: input.branchName,
+          instagramUrl: input.instagramUrl,
+          instagramHandle: input.instagramHandle,
+          address: input.address,
+          phone: input.phone,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          isActive: input.isActive,
+        },
+      });
 
-      if (input.brandId !== undefined) {
-        fields.push(`brand_id = $${paramIndex}`);
-        values.push(input.brandId);
-        paramIndex++;
-      }
-      if (input.name !== undefined) {
-        fields.push(`name = $${paramIndex}`);
-        values.push(input.name);
-        paramIndex++;
-      }
-      if (input.branchName !== undefined) {
-        fields.push(`branch_name = $${paramIndex}`);
-        values.push(input.branchName);
-        paramIndex++;
-      }
-      if (input.instagramUrl !== undefined) {
-        fields.push(`instagram_url = $${paramIndex}`);
-        values.push(input.instagramUrl);
-        paramIndex++;
-      }
-      if (input.instagramHandle !== undefined) {
-        fields.push(`instagram_handle = $${paramIndex}`);
-        values.push(input.instagramHandle);
-        paramIndex++;
-      }
-      if (input.address !== undefined) {
-        fields.push(`address = $${paramIndex}`);
-        values.push(input.address);
-        paramIndex++;
-      }
-      if (input.phone !== undefined) {
-        fields.push(`phone = $${paramIndex}`);
-        values.push(input.phone);
-        paramIndex++;
-      }
-      if (input.latitude !== undefined) {
-        fields.push(`latitude = $${paramIndex}`);
-        values.push(input.latitude);
-        paramIndex++;
-      }
-      if (input.longitude !== undefined) {
-        fields.push(`longitude = $${paramIndex}`);
-        values.push(input.longitude);
-        paramIndex++;
-      }
-      if (input.isActive !== undefined) {
-        fields.push(`is_active = $${paramIndex}`);
-        values.push(input.isActive);
-        paramIndex++;
-      }
+      const brand = await prisma.brand.findUnique({
+        where: { id: gym.brandId }
+      });
 
-      values.push(id);
-      try {
-        const result = await pool.query(
-          `UPDATE gyms SET ${fields.join(
-            ", "
-          )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
-          values
-        );
-
-        const gym = result.rows[0];
-        const brandResult = await pool.query(
-          "SELECT * FROM brands WHERE id = $1",
-          [gym.brand_id]
-        );
-        const brand = brandResult.rows[0];
-
-        return {
-          ...gym,
-          brandId: gym.brand_id,
-          branchName: gym.branch_name,
-          instagramUrl: gym.instagram_url,
-          instagramHandle: gym.instagram_handle,
-          isActive: gym.is_active,
-          createdAt: formatDate(gym.created_at),
-          updatedAt: formatDate(gym.updated_at),
-          brand: {
-            ...brand,
-            logoUrl: brand.logo_url,
-            websiteUrl: brand.website_url,
-            createdAt: formatDate(brand.created_at),
-            updatedAt: formatDate(brand.updated_at),
-          },
-        };
-      } catch (error: any) {
-        if (error.code === "23505") {
-          if (error.constraint === "unique_brand_branch") {
-            // 브랜드명 조회 - 현재 암장의 브랜드 또는 새로 설정할 브랜드
-            let targetBrandId = input.brandId;
-            if (!targetBrandId) {
-              const currentGymResult = await pool.query(
-                "SELECT brand_id FROM gyms WHERE id = $1",
-                [id]
-              );
-              targetBrandId = currentGymResult.rows[0]?.brand_id;
-            }
-            const brandResult = await pool.query(
-              "SELECT name FROM brands WHERE id = $1",
-              [targetBrandId]
-            );
-            const brandName = brandResult.rows[0]?.name || "해당 브랜드";
-            throw new Error(
-              `${brandName}에 "${input.branchName}" 지점이 이미 존재합니다. 다른 지점명을 사용해주세요.`
-            );
-          }
-          if (error.constraint === "unique_instagram_handle") {
-            throw new Error(
-              `인스타그램 핸들 "${input.instagramHandle}"이 이미 사용 중입니다. 다른 핸들을 사용해주세요.`
-            );
-          }
-        }
-        throw error;
-      }
+      return {
+        ...gym,
+        brandId: gym.brandId,
+        branchName: gym.branchName,
+        instagramUrl: gym.instagramUrl,
+        instagramHandle: gym.instagramHandle,
+        isActive: gym.isActive,
+        createdAt: formatDate(gym.createdAt),
+        updatedAt: formatDate(gym.updatedAt),
+        brand: {
+          ...brand,
+          logoUrl: brand.logoUrl,
+          websiteUrl: brand.websiteUrl,
+          createdAt: formatDate(brand.createdAt),
+          updatedAt: formatDate(brand.updatedAt),
+        },
+      };
     },
 
     deleteGym: async (_: any, { id }: { id: string }) => {
-      await pool.query("DELETE FROM gyms WHERE id = $1", [id]);
+      await prisma.gym.delete({
+        where: { id }
+      });
       return true;
     },
 
     createRouteUpdate: async (_: any, { input }: { input: any }) => {
-      const result = await pool.query(
-        `
-        INSERT INTO route_updates (gym_id, type, update_date, title, description, instagram_post_url, instagram_post_id, image_urls, raw_caption, parsed_data, is_verified)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING *
-      `,
-        [
-          input.gymId,
-          input.type,
-          input.updateDate,
-          input.title,
-          input.description,
-          input.instagramPostUrl,
-          input.instagramPostId,
-          input.imageUrls,
-          input.rawCaption,
-          input.parsedData,
-          input.isVerified,
-        ]
-      );
-
-      const update = result.rows[0];
-      const gymResult = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.id = $1
-      `,
-        [update.gym_id]
-      );
-
-      return {
-        id: update.id,
-        gymId: update.gym_id,
-        type: update.type,
-        updateDate: formatDateOnly(update.update_date),
-        title: update.title,
-        description: update.description,
-        instagramPostUrl: update.instagram_post_url,
-        instagramPostId: update.instagram_post_id,
-        imageUrls: update.image_urls,
-        rawCaption: update.raw_caption,
-        parsedData: update.parsed_data,
-        isVerified: update.is_verified,
-        createdAt: formatDate(update.created_at),
-        updatedAt: formatDate(update.updated_at),
-        gym: {
-          id: gymResult.rows[0].id,
-          name: gymResult.rows[0].name,
-          branchName: gymResult.rows[0].branch_name,
-          instagramHandle: gymResult.rows[0].instagram_handle,
-          brand: {
-            id: gymResult.rows[0].brand_id,
-            name: gymResult.rows[0].brand_name,
-            logoUrl: gymResult.rows[0].brand_logo_url,
+      try {
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        // enum 값이 이미 소문자로 전달됨
+        const prismaType = input.type;
+        
+        // 날짜 문자열을 Date 객체로 변환
+        const updateDate = new Date(input.updateDate);
+        
+        const update = await prisma.routeUpdate.create({
+          data: {
+            gymId: input.gymId,
+            type: prismaType as any,
+            updateDate: updateDate,
+            title: input.title,
+            description: input.description,
+            instagramPostUrl: input.instagramPostUrl,
+            instagramPostId: input.instagramPostId,
+            imageUrls: input.imageUrls || [],
+            rawCaption: input.rawCaption,
+            parsedData: input.parsedData,
+            isVerified: input.isVerified || false,
           },
-        },
-      };
+        });
+
+        const gym = await prisma.gym.findUnique({
+          where: { id: update.gymId },
+          include: {
+            brand: true
+          }
+        });
+
+        if (!gym) {
+          throw new Error("해당 암장을 찾을 수 없습니다.");
+        }
+
+        return {
+          id: update.id,
+          gymId: update.gymId,
+          type: update.type,
+          updateDate: formatDateOnly(update.updateDate),
+          title: update.title,
+          description: update.description,
+          instagramPostUrl: update.instagramPostUrl,
+          instagramPostId: update.instagramPostId,
+          imageUrls: update.imageUrls,
+          rawCaption: update.rawCaption,
+          parsedData: update.parsedData,
+          isVerified: update.isVerified,
+          createdAt: formatDate(update.createdAt),
+          updatedAt: formatDate(update.updatedAt),
+          gym: {
+            id: gym.id,
+            name: gym.name,
+            branchName: gym.branchName,
+            instagramHandle: gym.instagramHandle,
+            brand: {
+              id: gym.brand.id,
+              name: gym.brand.name,
+              logoUrl: gym.brand.logoUrl,
+            },
+          },
+        };
+      } catch (error: any) {
+        console.error('createRouteUpdate error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
+        if (error.code === "P2003") {
+          throw new Error("해당 암장을 찾을 수 없습니다.");
+        }
+        
+        if (error.message.includes("Invalid value for argument `type`")) {
+          throw new Error("잘못된 업데이트 타입입니다. 'newset', 'removal', 'partial_removal', 'announcement' 중 하나를 선택해주세요.");
+        }
+        
+        if (error.message.includes("Invalid value for argument `updateDate`")) {
+          throw new Error("잘못된 날짜 형식입니다. YYYY-MM-DD 형식으로 입력해주세요.");
+        }
+        
+        throw new Error("업데이트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        await prisma.$disconnect();
+      }
     },
 
     updateRouteUpdate: async (
       _: any,
       { id, input }: { id: string; input: any }
     ) => {
-      const fields = [];
-      const values = [];
-      let paramIndex = 1;
+      try {
+        // 데이터베이스 연결 확인
+        await prisma.$connect();
+        
+        // enum 값이 이미 소문자로 전달됨
+        const prismaType = input.type;
+        
+        const updateData: any = {};
+        if (input.gymId !== undefined) updateData.gymId = input.gymId;
+        if (prismaType !== undefined) updateData.type = prismaType as any;
+        if (input.updateDate !== undefined) updateData.updateDate = new Date(input.updateDate);
+        if (input.title !== undefined) updateData.title = input.title;
+        if (input.description !== undefined) updateData.description = input.description;
+        if (input.instagramPostUrl !== undefined) updateData.instagramPostUrl = input.instagramPostUrl;
+        if (input.instagramPostId !== undefined) updateData.instagramPostId = input.instagramPostId;
+        if (input.imageUrls !== undefined) updateData.imageUrls = input.imageUrls;
+        if (input.rawCaption !== undefined) updateData.rawCaption = input.rawCaption;
+        if (input.parsedData !== undefined) updateData.parsedData = input.parsedData;
+        if (input.isVerified !== undefined) updateData.isVerified = input.isVerified;
+        
+        const update = await prisma.routeUpdate.update({
+          where: { id },
+          data: updateData,
+        });
 
-      if (input.gymId !== undefined) {
-        fields.push(`gym_id = $${paramIndex}`);
-        values.push(input.gymId);
-        paramIndex++;
-      }
-      if (input.type !== undefined) {
-        fields.push(`type = $${paramIndex}`);
-        values.push(input.type);
-        paramIndex++;
-      }
-      if (input.updateDate !== undefined) {
-        fields.push(`update_date = $${paramIndex}`);
-        values.push(input.updateDate);
-        paramIndex++;
-      }
-      if (input.title !== undefined) {
-        fields.push(`title = $${paramIndex}`);
-        values.push(input.title);
-        paramIndex++;
-      }
-      if (input.description !== undefined) {
-        fields.push(`description = $${paramIndex}`);
-        values.push(input.description);
-        paramIndex++;
-      }
-      if (input.instagramPostUrl !== undefined) {
-        fields.push(`instagram_post_url = $${paramIndex}`);
-        values.push(input.instagramPostUrl);
-        paramIndex++;
-      }
-      if (input.instagramPostId !== undefined) {
-        fields.push(`instagram_post_id = $${paramIndex}`);
-        values.push(input.instagramPostId);
-        paramIndex++;
-      }
-      if (input.imageUrls !== undefined) {
-        fields.push(`image_urls = $${paramIndex}`);
-        values.push(input.imageUrls);
-        paramIndex++;
-      }
-      if (input.rawCaption !== undefined) {
-        fields.push(`raw_caption = $${paramIndex}`);
-        values.push(input.rawCaption);
-        paramIndex++;
-      }
-      if (input.parsedData !== undefined) {
-        fields.push(`parsed_data = $${paramIndex}`);
-        values.push(input.parsedData);
-        paramIndex++;
-      }
-      if (input.isVerified !== undefined) {
-        fields.push(`is_verified = $${paramIndex}`);
-        values.push(input.isVerified);
-        paramIndex++;
-      }
+        const gym = await prisma.gym.findUnique({
+          where: { id: update.gymId },
+          include: {
+            brand: true
+          }
+        });
 
-      values.push(id);
-      const result = await pool.query(
-        `UPDATE route_updates SET ${fields.join(
-          ", "
-        )}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
-        values
-      );
+        if (!gym) {
+          throw new Error("해당 암장을 찾을 수 없습니다.");
+        }
 
-      const update = result.rows[0];
-      const gymResult = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.id = $1
-      `,
-        [update.gym_id]
-      );
-
-      return {
-        id: update.id,
-        gymId: update.gym_id,
-        type: update.type,
-        updateDate: formatDateOnly(update.update_date),
-        title: update.title,
-        description: update.description,
-        instagramPostUrl: update.instagram_post_url,
-        instagramPostId: update.instagram_post_id,
-        imageUrls: update.image_urls,
-        rawCaption: update.raw_caption,
-        parsedData: update.parsed_data,
-        isVerified: update.is_verified,
-        createdAt: formatDate(update.created_at),
-        updatedAt: formatDate(update.updated_at),
-        gym: {
-          id: gymResult.rows[0].id,
-          name: gymResult.rows[0].name,
-          branchName: gymResult.rows[0].branch_name,
-          instagramHandle: gymResult.rows[0].instagram_handle,
-          brand: {
-            id: gymResult.rows[0].brand_id,
-            name: gymResult.rows[0].brand_name,
-            logoUrl: gymResult.rows[0].brand_logo_url,
+        return {
+          id: update.id,
+          gymId: update.gymId,
+          type: update.type,
+          updateDate: formatDateOnly(update.updateDate),
+          title: update.title,
+          description: update.description,
+          instagramPostUrl: update.instagramPostUrl,
+          instagramPostId: update.instagramPostId,
+          imageUrls: update.imageUrls,
+          rawCaption: update.rawCaption,
+          parsedData: update.parsedData,
+          isVerified: update.isVerified,
+          createdAt: formatDate(update.createdAt),
+          updatedAt: formatDate(update.updatedAt),
+          gym: {
+            id: gym.id,
+            name: gym.name,
+            branchName: gym.branchName,
+            instagramHandle: gym.instagramHandle,
+            brand: {
+              id: gym.brand.id,
+              name: gym.brand.name,
+              logoUrl: gym.brand.logoUrl,
+            },
           },
-        },
-      };
+        };
+      } catch (error: any) {
+        console.error('updateRouteUpdate error:', error);
+        
+        if (error.code === "P1001") {
+          throw new Error("데이터베이스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        
+        if (error.code === "P2025") {
+          throw new Error("해당 업데이트를 찾을 수 없습니다.");
+        }
+        
+        if (error.code === "P2003") {
+          throw new Error("해당 암장을 찾을 수 없습니다.");
+        }
+        
+        if (error.message.includes("Invalid value for argument `type`")) {
+          throw new Error("잘못된 업데이트 타입입니다. 'newset', 'removal', 'partial_removal', 'announcement' 중 하나를 선택해주세요.");
+        }
+        
+        if (error.message.includes("Invalid value for argument `updateDate`")) {
+          throw new Error("잘못된 날짜 형식입니다. YYYY-MM-DD 형식으로 입력해주세요.");
+        }
+        
+        throw new Error("업데이트 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        await prisma.$disconnect();
+      }
     },
 
     deleteRouteUpdate: async (_: any, { id }: { id: string }) => {
-      await pool.query("DELETE FROM route_updates WHERE id = $1", [id]);
+      await prisma.routeUpdate.delete({
+        where: { id }
+      });
       return true;
     },
 
     createCrawlLog: async (_: any, { input }: { input: any }) => {
-      const result = await pool.query(
-        `
-        INSERT INTO crawl_logs (gym_id, status, posts_found, posts_new, error_message, started_at, completed_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
-      `,
-        [
-          input.gymId,
-          input.status,
-          input.postsFound,
-          input.postsNew,
-          input.errorMessage,
-          input.startedAt,
-          input.completedAt,
-        ]
-      );
+      const log = await prisma.crawlLog.create({
+        data: {
+          gymId: input.gymId,
+          status: input.status,
+          postsFound: input.postsFound,
+          postsNew: input.postsNew,
+          errorMessage: input.errorMessage,
+          startedAt: input.startedAt,
+          completedAt: input.completedAt,
+        },
+      });
 
-      const log = result.rows[0];
-      const gymResult = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.id = $1
-      `,
-        [log.gym_id]
-      );
+      const gym = await prisma.gym.findUnique({
+        where: { id: log.gymId },
+        include: {
+          brand: true
+        }
+      });
 
       return {
         ...log,
         gym: {
-          id: gymResult.rows[0].id,
-          name: gymResult.rows[0].name,
-          branchName: gymResult.rows[0].branch_name,
+          id: gym.id,
+          name: gym.name,
+          branchName: gym.branchName,
           brand: {
-            id: gymResult.rows[0].brand_id,
-            name: gymResult.rows[0].brand_name,
+            id: gym.brand.id,
+            name: gym.brand.name,
           },
         },
       };
@@ -809,74 +761,35 @@ export const resolvers = {
       _: any,
       { id, input }: { id: string; input: any }
     ) => {
-      const fields = [];
-      const values = [];
-      let paramIndex = 1;
+      const log = await prisma.crawlLog.update({
+        where: { id },
+        data: {
+          gymId: input.gymId,
+          status: input.status,
+          postsFound: input.postsFound,
+          postsNew: input.postsNew,
+          errorMessage: input.errorMessage,
+          startedAt: input.startedAt,
+          completedAt: input.completedAt,
+        },
+      });
 
-      if (input.gymId !== undefined) {
-        fields.push(`gym_id = $${paramIndex}`);
-        values.push(input.gymId);
-        paramIndex++;
-      }
-      if (input.status !== undefined) {
-        fields.push(`status = $${paramIndex}`);
-        values.push(input.status);
-        paramIndex++;
-      }
-      if (input.postsFound !== undefined) {
-        fields.push(`posts_found = $${paramIndex}`);
-        values.push(input.postsFound);
-        paramIndex++;
-      }
-      if (input.postsNew !== undefined) {
-        fields.push(`posts_new = $${paramIndex}`);
-        values.push(input.postsNew);
-        paramIndex++;
-      }
-      if (input.errorMessage !== undefined) {
-        fields.push(`error_message = $${paramIndex}`);
-        values.push(input.errorMessage);
-        paramIndex++;
-      }
-      if (input.startedAt !== undefined) {
-        fields.push(`started_at = $${paramIndex}`);
-        values.push(input.startedAt);
-        paramIndex++;
-      }
-      if (input.completedAt !== undefined) {
-        fields.push(`completed_at = $${paramIndex}`);
-        values.push(input.completedAt);
-        paramIndex++;
-      }
-
-      values.push(id);
-      const result = await pool.query(
-        `UPDATE crawl_logs SET ${fields.join(
-          ", "
-        )} WHERE id = $${paramIndex} RETURNING *`,
-        values
-      );
-
-      const log = result.rows[0];
-      const gymResult = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.id = $1
-      `,
-        [log.gym_id]
-      );
+      const gym = await prisma.gym.findUnique({
+        where: { id: log.gymId },
+        include: {
+          brand: true
+        }
+      });
 
       return {
         ...log,
         gym: {
-          id: gymResult.rows[0].id,
-          name: gymResult.rows[0].name,
-          branchName: gymResult.rows[0].branch_name,
+          id: gym.id,
+          name: gym.name,
+          branchName: gym.branchName,
           brand: {
-            id: gymResult.rows[0].brand_id,
-            name: gymResult.rows[0].brand_name,
+            id: gym.brand.id,
+            name: gym.brand.name,
           },
         },
       };
@@ -885,35 +798,29 @@ export const resolvers = {
 
   Brand: {
     gyms: async (parent: any) => {
-      const result = await pool.query(
-        `
-        SELECT g.*, b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url, b.website_url as brand_website_url
-        FROM gyms g
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE g.brand_id = $1
-        ORDER BY g.name
-      `,
-        [parent.id]
-      );
+      const gyms = await prisma.gym.findMany({
+        where: { brandId: parent.id },
+        orderBy: { name: 'asc' }
+      });
 
-      return result.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        branchName: row.branch_name,
-        instagramUrl: row.instagram_url,
-        instagramHandle: row.instagram_handle,
-        address: row.address,
-        phone: row.phone,
-        latitude: row.latitude,
-        longitude: row.longitude,
-        isActive: row.is_active,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+      return gyms.map((gym) => ({
+        id: gym.id,
+        name: gym.name,
+        branchName: gym.branchName,
+        instagramUrl: gym.instagramUrl,
+        instagramHandle: gym.instagramHandle,
+        address: gym.address,
+        phone: gym.phone,
+        latitude: gym.latitude,
+        longitude: gym.longitude,
+        isActive: gym.isActive,
+        createdAt: formatDate(gym.createdAt),
+        updatedAt: formatDate(gym.updatedAt),
         brand: {
-          id: row.brand_id,
-          name: row.brand_name,
-          logoUrl: row.brand_logo_url,
-          websiteUrl: row.brand_website_url,
+          id: gym.brandId,
+          name: gym.brand.name,
+          logoUrl: gym.brand.logoUrl,
+          websiteUrl: gym.brand.websiteUrl,
         },
       }));
     },
@@ -921,43 +828,42 @@ export const resolvers = {
 
   Gym: {
     routeUpdates: async (parent: any) => {
-      const result = await pool.query(
-        `
-        SELECT ru.*, g.id as gym_id, g.name as gym_name, g.branch_name as gym_branch_name, g.instagram_handle as gym_instagram_handle,
-               b.id as brand_id, b.name as brand_name, b.logo_url as brand_logo_url
-        FROM route_updates ru
-        LEFT JOIN gyms g ON ru.gym_id = g.id
-        LEFT JOIN brands b ON g.brand_id = b.id
-        WHERE ru.gym_id = $1
-        ORDER BY ru.update_date DESC
-      `,
-        [parent.id]
-      );
+      const routeUpdates = await prisma.routeUpdate.findMany({
+        where: { gymId: parent.id },
+        include: {
+          gym: {
+            include: {
+              brand: true
+            }
+          }
+        },
+        orderBy: { updateDate: 'desc' }
+      });
 
-      return result.rows.map((row) => ({
-        id: row.id,
-        gymId: row.gym_id,
-        type: row.type,
-        updateDate: formatDateOnly(row.update_date),
-        title: row.title,
-        description: row.description,
-        instagramPostUrl: row.instagram_post_url,
-        instagramPostId: row.instagram_post_id,
-        imageUrls: row.image_urls,
-        rawCaption: row.raw_caption,
-        parsedData: row.parsed_data,
-        isVerified: row.is_verified,
-        createdAt: formatDate(row.created_at),
-        updatedAt: formatDate(row.updated_at),
+      return routeUpdates.map((update) => ({
+        id: update.id,
+        gymId: update.gymId,
+        type: update.type,
+        updateDate: formatDateOnly(update.updateDate),
+        title: update.title,
+        description: update.description,
+        instagramPostUrl: update.instagramPostUrl,
+        instagramPostId: update.instagramPostId,
+        imageUrls: update.imageUrls,
+        rawCaption: update.rawCaption,
+        parsedData: update.parsedData,
+        isVerified: update.isVerified,
+        createdAt: formatDate(update.createdAt),
+        updatedAt: formatDate(update.updatedAt),
         gym: {
-          id: row.gym_id,
-          name: row.gym_name,
-          branchName: row.gym_branch_name,
-          instagramHandle: row.gym_instagram_handle,
+          id: update.gym.id,
+          name: update.gym.name,
+          branchName: update.gym.branchName,
+          instagramHandle: update.gym.instagramHandle,
           brand: {
-            id: row.brand_id,
-            name: row.brand_name,
-            logoUrl: row.brand_logo_url,
+            id: update.gym.brand.id,
+            name: update.gym.brand.name,
+            logoUrl: update.gym.brand.logoUrl,
           },
         },
       }));

@@ -91,13 +91,32 @@ npm install
 3. 환경 변수 설정
 `.env.local` 파일 생성:
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/climb_hub
+# 로컬 PostgreSQL 사용 시
+DATABASE_URL=postgresql://username@localhost:5432/climb_hub
+
+# Supabase 사용 시
+# DATABASE_URL=postgresql://postgres.username:password@host:port/postgres
+
+# 환경 설정
+NODE_ENV=development
+
+# GraphQL 설정
+NEXT_PUBLIC_GRAPHQL_ENDPOINT=/api/graphql
+
+# PWA 설정 (개발 환경에서는 비활성화)
+NEXT_PUBLIC_PWA_ENABLED=false
 ```
 
 4. 데이터베이스 설정
 ```bash
-npm run db:migrate
-npm run db:seed
+# 데이터베이스 스키마 적용
+npx prisma db push
+
+# Prisma 클라이언트 생성
+npx prisma generate
+
+# (선택사항) 샘플 데이터 추가
+npx prisma db seed
 ```
 
 5. 개발 서버 실행
@@ -106,6 +125,52 @@ npm run dev
 ```
 
 6. 브라우저에서 `http://localhost:3000` 접속
+
+## 🔧 문제 해결
+
+### 데이터베이스 연결 오류
+만약 "Database `climb_hub` does not exist" 오류가 발생한다면:
+
+1. PostgreSQL이 실행 중인지 확인:
+```bash
+brew services list | grep postgresql
+```
+
+2. 데이터베이스 생성:
+```bash
+createdb climb_hub
+```
+
+3. 환경 변수 확인:
+```bash
+echo $DATABASE_URL
+```
+
+4. Prisma 스키마 적용:
+```bash
+npx prisma db push
+```
+
+### 브랜드 등록 오류
+브랜드 등록 시 오류가 발생한다면:
+
+1. 데이터베이스 연결 상태 확인
+2. Prisma 클라이언트 재생성:
+```bash
+npx prisma generate
+```
+
+3. 개발 서버 재시작:
+```bash
+npm run dev
+```
+
+### GraphQL 오류
+GraphQL 쿼리/뮤테이션 오류가 발생한다면:
+
+1. 브라우저 개발자 도구에서 네트워크 탭 확인
+2. 서버 로그에서 오류 메시지 확인
+3. 데이터베이스 연결 상태 확인
 
 ## 📱 주요 화면 구성
 

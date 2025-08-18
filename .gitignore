@@ -62,3 +62,4 @@ coverage/
 # Testing
 coverage/
 test-output/
+/src/generated/prisma

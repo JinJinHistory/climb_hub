@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Calendar, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Calendar, MapPin, ArrowLeft } from "lucide-react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_ALL_GYMS } from "@/graphql/queries";
 import { CREATE_ROUTE_UPDATE } from "@/graphql/mutations";
@@ -9,9 +10,10 @@ import { format } from "date-fns";
 import { UpdateType } from "@/types";
 
 export default function AdminUpdatesPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     gymId: "",
-    type: "NEWSET" as UpdateType,
+    type: "newset" as UpdateType,
     updateDate: format(new Date(), "yyyy-MM-dd"),
     title: "",
     description: "",
@@ -41,17 +43,10 @@ export default function AdminUpdatesPage() {
         },
       });
 
-      alert("업데이트가 추가되었습니다!");
+      alert("업데이트가 추가되었습니다! 업데이트 목록으로 이동합니다.");
 
-      // 폼 초기화
-      setFormData({
-        gymId: "",
-        type: "NEWSET" as UpdateType,
-        updateDate: format(new Date(), "yyyy-MM-dd"),
-        title: "",
-        description: "",
-        instagramPostUrl: "",
-      });
+      // 업데이트 목록 페이지로 이동 (새로고침 파라미터 추가)
+      router.push("/admin/updates/list?refresh=true");
     } catch (error: any) {
       console.error("Error adding update:", error);
       const errorMessage =
@@ -65,10 +60,10 @@ export default function AdminUpdatesPage() {
   };
 
   const updateTypes = [
-    { value: "NEWSET", label: "뉴셋", color: "text-green-600" },
-    { value: "REMOVAL", label: "탈거", color: "text-red-600" },
-
-    { value: "ANNOUNCEMENT", label: "공지", color: "text-blue-600" },
+    { value: "newset", label: "뉴셋", color: "text-green-600" },
+    { value: "removal", label: "탈거", color: "text-red-600" },
+    { value: "partial_removal", label: "부분 탈거", color: "text-orange-600" },
+    { value: "announcement", label: "공지", color: "text-blue-600" },
   ];
 
   const gyms = gymsData?.gyms || [];
@@ -85,7 +80,16 @@ export default function AdminUpdatesPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">수동 업데이트 추가</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">수동 업데이트 추가</h1>
+        <button
+          onClick={() => router.push("/admin/updates/list")}
+          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          목록으로 돌아가기
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
         <div className="space-y-4">
@@ -146,19 +150,24 @@ export default function AdminUpdatesPage() {
           <div>
             <label className="block text-sm font-medium mb-2">
               <Calendar className="inline w-4 h-4 mr-1" />
-              {formData.type === "NEWSET" && "🆕 세팅일"}
-              {formData.type === "REMOVAL" && "⚠️ 탈거일"}
-
-              {formData.type === "ANNOUNCEMENT" && "📢 공지일"}
+              {formData.type === "newset" && "🆕 세팅일"}
+              {formData.type === "removal" && "⚠️ 탈거일"}
+              {formData.type === "partial_removal" && "🔶 부분 탈거일"}
+              {formData.type === "announcement" && "📢 공지일"}
               {!formData.type && "업데이트 날짜"}
             </label>
-            {formData.type === "REMOVAL" && (
+            {formData.type === "removal" && (
               <p className="text-sm text-red-600 mb-2">
                 💡 탈거 시작 시간도 제목이나 설명에 명시해주세요 (예: 23시부터
                 탈거)
               </p>
             )}
-            {formData.type === "NEWSET" && (
+            {formData.type === "partial_removal" && (
+              <p className="text-sm text-orange-600 mb-2">
+                💡 부분 탈거되는 구체적인 루트나 구역을 설명에 명시해주세요
+              </p>
+            )}
+            {formData.type === "newset" && (
               <p className="text-sm text-green-600 mb-2">
                 💡 세팅 완료 예상 시간이나 오픈 시간을 설명에 추가해주세요
               </p>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Edit2, Trash2, Calendar, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, Calendar, Search, RefreshCw } from "lucide-react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_ROUTE_UPDATES, GET_ALL_GYMS } from "@/graphql/queries";
 import { DELETE_ROUTE_UPDATE } from "@/graphql/mutations";
@@ -22,6 +23,8 @@ const safeFormatDate = (
 };
 
 export default function AdminUpdatesListPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [filteredUpdates, setFilteredUpdates] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -36,6 +39,7 @@ export default function AdminUpdatesListPage() {
     variables: {
       limit: 1000, // 충분한 데이터를 가져오기 위해 큰 값 설정
     },
+    fetchPolicy: "cache-and-network", // 캐시와 네트워크 모두 사용
   });
 
   // 암장 목록 가져오기
@@ -52,6 +56,20 @@ export default function AdminUpdatesListPage() {
   useEffect(() => {
     filterUpdates();
   }, [updates, searchTerm, filterType, filterGym]);
+
+  // 새로고침 파라미터 감지 및 데이터 재조회
+  useEffect(() => {
+    const refresh = searchParams.get("refresh");
+    if (refresh === "true") {
+      refetchUpdates();
+      // URL에서 refresh 파라미터 제거
+      router.replace("/admin/updates/list");
+      // 성공 메시지 표시
+      setTimeout(() => {
+        alert("업데이트 목록이 새로고침되었습니다.");
+      }, 100);
+    }
+  }, [searchParams, refetchUpdates, router]);
 
   const filterUpdates = () => {
     let filtered = [...updates];
@@ -103,10 +121,13 @@ export default function AdminUpdatesListPage() {
 
   const getUpdateTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
-      NEWSET: { label: "뉴셋", color: "bg-green-100 text-green-800" },
-      REMOVAL: { label: "탈거", color: "bg-red-100 text-red-800" },
-
-      ANNOUNCEMENT: { label: "공지", color: "bg-blue-100 text-blue-800" },
+      newset: { label: "뉴셋", color: "bg-green-100 text-green-800" },
+      removal: { label: "탈거", color: "bg-red-100 text-red-800" },
+      partial_removal: {
+        label: "부분 탈거",
+        color: "bg-orange-100 text-orange-800",
+      },
+      announcement: { label: "공지", color: "bg-blue-100 text-blue-800" },
     };
     return types[type] || { label: type, color: "bg-gray-100 text-gray-800" };
   };
@@ -123,12 +144,24 @@ export default function AdminUpdatesListPage() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">업데이트 목록</h1>
-        <Link
-          href="/admin/updates"
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />새 업데이트 추가
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              refetchUpdates();
+              alert("업데이트 목록이 새로고침되었습니다.");
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <RefreshCw className="w-5 h-5" />
+            새로고침
+          </button>
+          <Link
+            href="/admin/updates"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />새 업데이트 추가
+          </Link>
+        </div>
       </div>
 
       {/* 필터 섹션 */}
@@ -151,10 +184,10 @@ export default function AdminUpdatesListPage() {
             className="p-2 border rounded-lg"
           >
             <option value="all">모든 타입</option>
-            <option value="NEWSET">뉴셋</option>
-            <option value="REMOVAL">탈거</option>
-
-            <option value="ANNOUNCEMENT">공지</option>
+            <option value="newset">뉴셋</option>
+            <option value="removal">탈거</option>
+            <option value="partial_removal">부분 탈거</option>
+            <option value="announcement">공지</option>
           </select>
 
           <select

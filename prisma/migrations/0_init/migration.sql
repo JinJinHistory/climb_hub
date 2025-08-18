@@ -1,9 +1,6 @@
 -- Climb Hub Database Schema
 -- PostgreSQL 테이블 생성 스크립트
 
--- 데이터베이스 생성 (필요시)
--- CREATE DATABASE climb_hub;
-
 -- brands 테이블
 CREATE TABLE IF NOT EXISTS brands (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -90,7 +87,7 @@ CREATE TRIGGER update_gyms_updated_at BEFORE UPDATE ON gyms
 CREATE TRIGGER update_route_updates_updated_at BEFORE UPDATE ON route_updates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 샘플 데이터 삽입 (선택사항)
+-- 샘플 데이터 삽입
 INSERT INTO brands (name, logo_url, website_url) VALUES
 ('클라이밍존', 'https://example.com/logo1.png', 'https://climbingzone.com'),
 ('더클라이밍', 'https://example.com/logo2.png', 'https://theclimbing.com')
@@ -99,4 +96,4 @@ ON CONFLICT DO NOTHING;
 INSERT INTO gyms (brand_id, name, branch_name, instagram_handle, is_active) VALUES
 ((SELECT id FROM brands WHERE name = '클라이밍존' LIMIT 1), '클라이밍존 강남점', '강남점', 'climbingzone_gangnam', true),
 ((SELECT id FROM brands WHERE name = '더클라이밍' LIMIT 1), '더클라이밍 홍대점', '홍대점', 'theclimbing_hongdae', true)
-ON CONFLICT DO NOTHING; 
+ON CONFLICT DO NOTHING;

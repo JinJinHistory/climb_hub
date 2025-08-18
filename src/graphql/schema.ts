@@ -61,15 +61,16 @@ export const typeDefs = gql`
   }
 
   enum UpdateType {
-    NEWSET
-    REMOVAL
-    ANNOUNCEMENT
+    newset
+    removal
+    partial_removal
+    announcement
   }
 
   enum CrawlStatus {
-    SUCCESS
-    FAILED
-    PARTIAL
+    success
+    failed
+    partial
   }
 
   scalar JSON

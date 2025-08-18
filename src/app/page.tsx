@@ -39,7 +39,7 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
   const time = safeFormatDate(updateDate, "HH:mm");
 
   switch (type) {
-    case "NEWSET":
+    case "newset":
       return {
         label: "🆕 뉴셋 일자",
         date: fullDate,
@@ -47,7 +47,7 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
         urgency: "normal",
         color: "bg-green-100 text-green-800",
       };
-    case "REMOVAL":
+    case "removal":
       return {
         label: "⚠️ 탈거 예정일",
         date: fullDate,
@@ -55,7 +55,15 @@ const getDateDisplayInfo = (type: string, updateDate: string) => {
         urgency: "high",
         color: "bg-red-100 text-red-800",
       };
-    case "ANNOUNCEMENT":
+    case "partial_removal":
+      return {
+        label: "🔶 부분 탈거 예정일",
+        date: fullDate,
+        subtitle: "일부 루트가 탈거됩니다!",
+        urgency: "medium",
+        color: "bg-orange-100 text-orange-800",
+      };
+    case "announcement":
       return {
         label: "📢 공지 일자",
         date: fullDate,
@@ -98,17 +106,22 @@ export default function HomePage() {
       color: "bg-purple-100 text-purple-800 hover:bg-purple-200",
     },
     {
-      value: "NEWSET",
+      value: "newset",
       label: "뉴셋",
       color: "bg-green-100 text-green-800 hover:bg-green-200",
     },
     {
-      value: "REMOVAL",
+      value: "removal",
       label: "탈거",
       color: "bg-red-100 text-red-800 hover:bg-red-200",
     },
     {
-      value: "ANNOUNCEMENT",
+      value: "partial_removal",
+      label: "부분 탈거",
+      color: "bg-orange-100 text-orange-800 hover:bg-orange-200",
+    },
+    {
+      value: "announcement",
       label: "공지",
       color: "bg-blue-100 text-blue-800 hover:bg-blue-200",
     },
@@ -184,16 +197,25 @@ export default function HomePage() {
   const stats = useMemo(() => {
     const totalUpdates = updates.length;
     const newsetCount = updates.filter(
-      (u: RouteUpdate) => u.type === "NEWSET"
+      (u: RouteUpdate) => u.type === "newset"
     ).length;
     const removalCount = updates.filter(
-      (u: RouteUpdate) => u.type === "REMOVAL"
+      (u: RouteUpdate) => u.type === "removal"
+    ).length;
+    const partialRemovalCount = updates.filter(
+      (u: RouteUpdate) => u.type === "partial_removal"
     ).length;
     const announcementCount = updates.filter(
-      (u: RouteUpdate) => u.type === "ANNOUNCEMENT"
+      (u: RouteUpdate) => u.type === "announcement"
     ).length;
 
-    return { totalUpdates, newsetCount, removalCount, announcementCount };
+    return {
+      totalUpdates,
+      newsetCount,
+      removalCount,
+      partialRemovalCount,
+      announcementCount,
+    };
   }, [updates]);
 
   return (
@@ -374,17 +396,21 @@ export default function HomePage() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          update.type === "NEWSET"
+                          update.type === "newset"
                             ? "bg-green-100 text-green-800"
-                            : update.type === "REMOVAL"
+                            : update.type === "removal"
                             ? "bg-red-100 text-red-800"
+                            : update.type === "partial_removal"
+                            ? "bg-orange-100 text-orange-800"
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {update.type === "NEWSET"
+                        {update.type === "newset"
                           ? "뉴셋"
-                          : update.type === "REMOVAL"
+                          : update.type === "removal"
                           ? "탈거"
+                          : update.type === "partial_removal"
+                          ? "부분 탈거"
                           : "공지"}
                       </span>
                       <div>
