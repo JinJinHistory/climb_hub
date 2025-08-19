@@ -97,10 +97,9 @@ export default function AdminUpdateEditPage() {
   };
 
   const updateTypes = [
-    { value: "NEWSET", label: "뉴셋", color: "text-green-600" },
-    { value: "REMOVAL", label: "탈거", color: "text-red-600" },
-
-    { value: "ANNOUNCEMENT", label: "공지", color: "text-blue-600" },
+    { value: "newset", label: "뉴셋", color: "text-green-600" },
+    { value: "removal", label: "탈거", color: "text-red-600" },
+    { value: "announcement", label: "공지", color: "text-blue-600" },
   ];
 
   const gyms = gymsData?.gyms || [];
@@ -131,15 +130,15 @@ export default function AdminUpdateEditPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-6">
-        <Link
-          href="/admin/updates/list"
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          목록으로 돌아가기
-        </Link>
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">업데이트 수정</h1>
+        <button
+          onClick={() => router.push("/admin/updates/list")}
+          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          목록으로 돌아가기
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
@@ -201,19 +200,24 @@ export default function AdminUpdateEditPage() {
           <div>
             <label className="block text-sm font-medium mb-2">
               <Calendar className="inline w-4 h-4 mr-1" />
-              {formData.type === "NEWSET" && "🆕 세팅일"}
-              {formData.type === "REMOVAL" && "⚠️ 탈거일"}
-
-              {formData.type === "ANNOUNCEMENT" && "📢 공지일"}
+              {formData.type === "newset" && "🆕 세팅일"}
+              {formData.type === "removal" && "⚠️ 탈거일"}
+              {formData.type === "partial_removal" && "🔶 부분 탈거일"}
+              {formData.type === "announcement" && "📢 공지일"}
               {!formData.type && "업데이트 날짜"}
             </label>
-            {formData.type === "REMOVAL" && (
+            {formData.type === "removal" && (
               <p className="text-sm text-red-600 mb-2">
                 💡 탈거 시작 시간도 제목이나 설명에 명시해주세요 (예: 23시부터
                 탈거)
               </p>
             )}
-            {formData.type === "NEWSET" && (
+            {formData.type === "partial_removal" && (
+              <p className="text-sm text-orange-600 mb-2">
+                💡 부분 탈거되는 구체적인 루트나 구역을 설명에 명시해주세요
+              </p>
+            )}
+            {formData.type === "newset" && (
               <p className="text-sm text-green-600 mb-2">
                 💡 세팅 완료 예상 시간이나 오픈 시간을 설명에 추가해주세요
               </p>

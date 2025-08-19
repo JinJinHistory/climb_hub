@@ -67,10 +67,9 @@ export default function AdminDashboard() {
 
   const getUpdateTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
-      NEWSET: { label: "뉴셋", color: "bg-green-100 text-green-800" },
-      REMOVAL: { label: "탈거", color: "bg-red-100 text-red-800" },
-
-      ANNOUNCEMENT: { label: "공지", color: "bg-blue-100 text-blue-800" },
+      newset: { label: "뉴셋", color: "bg-green-100 text-green-800" },
+      removal: { label: "탈거", color: "bg-red-100 text-red-800" },
+      announcement: { label: "공지", color: "bg-blue-100 text-blue-800" },
     };
     return types[type] || { label: type, color: "bg-gray-100 text-gray-800" };
   };
@@ -197,10 +196,11 @@ export default function AdminDashboard() {
                       <div>
                         <p className="font-medium">{update.gym?.name}</p>
                         <p className="text-sm text-gray-600">
-                          {update.type === "NEWSET" && "뉴셋 일자: "}
-                          {update.type === "REMOVAL" && "탈거 예정일: "}
-
-                          {update.type === "ANNOUNCEMENT" && "공지 일자: "}
+                          {update.type === "newset" && "뉴셋 일자: "}
+                          {update.type === "removal" && "탈거 예정일: "}
+                          {update.type === "partial_removal" &&
+                            "부분 탈거 예정일: "}
+                          {update.type === "announcement" && "공지 일자: "}
                           {safeFormatDate(
                             update.updateDate,
                             "yyyy년 MM월 dd일 (E)",
