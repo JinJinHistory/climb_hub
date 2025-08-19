@@ -57,20 +57,6 @@ export default function AdminUpdatesListPage() {
     filterUpdates();
   }, [updates, searchTerm, filterType, filterGym]);
 
-  // 새로고침 파라미터 감지 및 데이터 재조회
-  useEffect(() => {
-    const refresh = searchParams.get("refresh");
-    if (refresh === "true") {
-      refetchUpdates();
-      // URL에서 refresh 파라미터 제거
-      router.replace("/admin/updates/list");
-      // 성공 메시지 표시
-      setTimeout(() => {
-        alert("업데이트 목록이 새로고침되었습니다.");
-      }, 100);
-    }
-  }, [searchParams, refetchUpdates, router]);
-
   const filterUpdates = () => {
     let filtered = [...updates];
 
@@ -145,16 +131,6 @@ export default function AdminUpdatesListPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">업데이트 목록</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => {
-              refetchUpdates();
-              alert("업데이트 목록이 새로고침되었습니다.");
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <RefreshCw className="w-5 h-5" />
-            새로고침
-          </button>
           <Link
             href="/admin/updates"
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"

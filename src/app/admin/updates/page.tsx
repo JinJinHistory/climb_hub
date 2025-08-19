@@ -46,7 +46,7 @@ export default function AdminUpdatesPage() {
       alert("업데이트가 추가되었습니다! 업데이트 목록으로 이동합니다.");
 
       // 업데이트 목록 페이지로 이동 (새로고침 파라미터 추가)
-      router.push("/admin/updates/list?refresh=true");
+      router.push("/admin/updates/list");
     } catch (error: any) {
       console.error("Error adding update:", error);
       const errorMessage =

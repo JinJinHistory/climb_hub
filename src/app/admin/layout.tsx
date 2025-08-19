@@ -9,7 +9,7 @@ export default function AdminLayout({
   const navItems = [
     { href: "/", label: "홈으로", icon: Home },
     { href: "/admin", label: "대시보드", icon: Home },
-    { href: "/admin/updates", label: "업데이트 추가", icon: Plus },
+    // { href: "/admin/updates", label: "업데이트 추가", icon: Plus },
     { href: "/admin/updates/list", label: "업데이트 목록", icon: List },
     { href: "/admin/brands", label: "브랜드 관리", icon: Tag },
     { href: "/admin/gyms", label: "암장 관리", icon: MapPin },
