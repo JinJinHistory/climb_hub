@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "make": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/make-server.js", "--stdio"],
+      "cwd": ".",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "apify": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/apify-server.js", "--stdio"],
+      "cwd": ".",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "chatgpt": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/chatgpt-server.js", "--stdio"],
+      "cwd": ".",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "supabase": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/supabase-server.js", "--stdio"],
+      "cwd": ".",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}

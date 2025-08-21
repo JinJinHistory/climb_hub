@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, RefreshCw, Plus, List, MapPin, Tag } from "lucide-react";
+import { Home, RefreshCw, Plus, List, MapPin, Tag, Server } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -13,6 +13,7 @@ export default function AdminLayout({
     { href: "/admin/updates/list", label: "업데이트 목록", icon: List },
     { href: "/admin/brands", label: "브랜드 관리", icon: Tag },
     { href: "/admin/gyms", label: "암장 관리", icon: MapPin },
+    { href: "/admin/mcp", label: "MCP 서버", icon: Server },
   ];
 
   return (

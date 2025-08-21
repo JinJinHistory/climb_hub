@@ -1,0 +1,94 @@
+# Climb Hub MCP 서버 설정
+
+## MCP 서버 구성
+
+이 프로젝트는 다음 MCP 서버들을 제공합니다:
+
+### Make.com MCP 서버
+- **목적**: 워크플로우 자동화 및 실행
+- **기능**: 워크플로우 트리거, 상태 조회, 생성/수정/삭제
+- **설정**: `scripts/mcp-servers/make-server.js`
+
+### Apify MCP 서버  
+- **목적**: 웹 스크래핑 및 데이터 수집
+- **기능**: 암장 정보, 루트 정보, 일정, 이벤트 스크래핑
+- **설정**: `scripts/mcp-servers/apify-server.js`
+
+### ChatGPT API MCP 서버
+- **목적**: AI 분석 및 콘텐츠 생성
+- **기능**: 데이터 분석, 설명 생성, 추천 시스템
+- **설정**: `scripts/mcp-servers/chatgpt-server.js`
+
+### Supabase MCP 서버
+- **목적**: 데이터베이스 연동 및 실시간 업데이트
+- **기능**: 데이터 동기화, 쿼리, 실시간 구독
+- **설정**: `scripts/mcp-servers/supabase-server.js`
+
+## 사용 방법
+
+### 1. MCP 서버 시작
+```bash
+npm run mcp:start
+```
+
+### 2. Cursor에서 MCP 서버 연결
+Cursor의 설정에서 MCP 서버들을 추가:
+
+```json
+{
+  "mcpServers": {
+    "make": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/make-server.js", "--stdio"],
+      "cwd": "/path/to/climb_hub"
+    },
+    "apify": {
+      "command": "node", 
+      "args": ["./scripts/mcp-servers/apify-server.js", "--stdio"],
+      "cwd": "/path/to/climb_hub"
+    },
+    "chatgpt": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/chatgpt-server.js", "--stdio"],
+      "cwd": "/path/to/climb_hub"
+    },
+    "supabase": {
+      "command": "node",
+      "args": ["./scripts/mcp-servers/supabase-server.js", "--stdio"],
+      "cwd": "/path/to/climb_hub"
+    }
+  }
+}
+```
+
+### 3. AI 도구에서 사용
+- **Make.com**: "클라이밍 암장 업데이트 워크플로우를 실행해줘"
+- **Apify**: "서울 클라이밍 암장 정보를 스크래핑해줘"
+- **ChatGPT**: "이 암장 데이터를 분석해줘"
+- **Supabase**: "최근 루트 업데이트를 조회해줘"
+
+## 웹 관리 인터페이스
+
+웹 애플리케이션에서도 MCP 서버들을 관리할 수 있습니다:
+- `/admin/mcp` - 서버 상태 및 연결 관리
+- 실시간 모니터링 및 테스트 기능
+
+## 환경 변수 설정
+
+`.env.local` 파일에 필요한 API 키들을 설정하세요:
+
+```env
+MAKE_API_KEY=your_make_api_key
+APIFY_API_TOKEN=your_apify_token
+OPENAI_API_KEY=your_openai_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_key
+```
+
+## 개발 및 테스트
+
+1. **개발 모드**: `npm run mcp:start` (WebSocket)
+2. **Cursor 통합**: `npm run mcp:start-stdio` (stdio)
+3. **서버 중지**: `npm run mcp:stop`
+
+이 설정으로 Cursor의 AI 기능과 웹 애플리케이션을 모두 활용할 수 있습니다.
